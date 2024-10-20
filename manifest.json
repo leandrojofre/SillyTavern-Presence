@@ -1,0 +1,11 @@
+{
+    "display_name": "Presence",
+    "loading_order": 1,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "author": "TheThirdDoor",
+    "version": "1.0.0",
+    "homePage": "https://github.com/your/plugin",
+    "auto_update": false
+}
