@@ -4,8 +4,8 @@
     "requires": [],
     "optional": [],
     "js": "index.js",
-    "author": "TheThirdDoor",
+    "author": "lackyas",
     "version": "1.0.0",
-    "homePage": "https://github.com/your/plugin",
+    "homePage": "https://github.com/lackyas/SillyTavern-Presence",
     "auto_update": false
 }
