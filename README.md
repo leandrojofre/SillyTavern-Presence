@@ -40,6 +40,10 @@ Character memory is tied to the chatID and does not transfer over to new branche
 This is currently an intentional work around to stop characters remembering messages from the original chat chain after the branch point.  
 There are better ways to do this but they would involve changing how data is saved.  
 
+### Deleting messages
+Due to the way SillyTavern handles events, there is no way to tell what message was being deleted.
+As such this plugin always assumes it was the MOST RECENT message that was deleted, and it updates characters' memories accordingly
+
 ### Impersonations
 Due to the way SillyTavern handles events, there is no way to tell if a message is being generated on behalf of the user (i.e. using the impersonate button).  
 SillyTavern uses a random character to generate the message for the user, and so the impersonation will be limited to information in that character's memory.  
