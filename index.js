@@ -3,7 +3,7 @@ import { hideChatMessageRange } from "../../../chats.js";
 import { extension_settings, getContext } from "../../../extensions.js";
 import { registerSlashCommand } from '../../../slash-commands.js';
 
-let debugMode = true;
+let debugMode = false;
 
 const log = (...msg)=>console.log('[Presence]', ...msg);
 const debug = (...msg)=>{if(debugMode){console.log('[Presence debug]', ...msg)}};
