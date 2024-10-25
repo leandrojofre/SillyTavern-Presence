@@ -285,7 +285,7 @@ jQuery(async () => {
 
 	groupMemberTemplateIcons.before(ignorePresenceButton);
 
-	$(document).on("click", "#rm_group_members .ignore_presence_toggle", togglePresenceTracking);
+	$("#rm_group_members").on("click", ".ignore_presence_toggle", togglePresenceTracking);
 
 	const groupMemberList = document.getElementById("rm_group_members");
 	const observer = new MutationObserver((mutationList, observer) => {
