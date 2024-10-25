@@ -1,0 +1,103 @@
+#chat .mes_block .mes_presence_tracker {
+	--icon-size: 60px;
+	--gap-size: 15px;
+	--icon-size-minified: 20px;
+	--gap-size-minified: 5px;
+	--transition: linear 0.15s;
+
+	padding-left: 0;
+	padding-top: 5px;
+	padding-bottom: 0;
+	display: flex;
+	flex-wrap: wrap;
+	transition: var(--transition);
+	max-width: 100%;
+	min-width: 100px;
+	width: fit-content;
+}
+
+#chat .mes_block .mes_presence_tracker:before {
+	content: "\f06e";
+	vertical-align: middle;
+	text-align: center;
+	position: absolute;
+	margin-top: 3px;
+	z-index: 1;
+	color: var(--SmartThemeBodyColor);
+	font-weight: 900;
+	font-family: "Font Awesome 6 Free";
+	width: var(--icon-size-minified);
+	opacity: 40%;
+	font-size: var(--mainFontSize);
+	transition: var(--transition);
+}
+
+#chat .mes_block .mes_presence_tracker:hover:before {
+	margin-top: 3px;
+	font-size: 52px;
+	opacity: 0%;
+}
+
+#chat .mes_block .mes_presence_tracker .presence_icon {
+	width: 0;
+	height: var(--icon-size-minified);
+	border-radius: 50%;
+	overflow: hidden;
+	opacity: 0%;
+	transition: var(--transition);
+	cursor: pointer;
+	margin-right: 0;
+	text-align: right;
+	z-index: 2;
+}
+
+#chat .mes_block .mes_presence_tracker .presence_icon.present {
+	opacity: 100%;
+	margin-right: var(--gap-size-minified);
+	width: var(--icon-size-minified);
+}
+
+#chat .mes_block .mes_presence_tracker .presence_icon img {
+	transition: var(--transition);
+	width: var(--icon-size-minified);
+}
+
+#chat .mes_block .mes_presence_tracker:hover .presence_icon {
+	width: var(--icon-size) !important;
+	height: var(--icon-size) !important;
+	opacity: 40%;
+	width: 20px;
+	margin-right: var(--gap-size) !important;
+}
+
+#chat .mes_block .mes_presence_tracker:hover .presence_icon.present {
+	opacity: 100%;
+	margin-right: var(--gap-size) !important;
+}
+
+#chat .mes_block .mes_presence_tracker:hover .presence_icon img {
+	width: var(--icon-size) !important;
+}
+
+#rm_group_members .ignore_presence_toggle {
+	margin-right: 10px;
+}
+
+#rm_group_members .ignore_presence_toggle::before {
+	width: 24px;
+}
+
+#rm_group_members .ignore_presence_toggle:not(.active) {
+	opacity: 0.4;
+	filter: brightness(0.5);
+	transition: all 0.2s ease-in-out;
+}
+
+#rm_group_members .ignore_presence_toggle:hover {
+	opacity: inherit;
+	filter: drop-shadow(0px 0px 5px rgb(243, 65, 65));
+}
+
+#rm_group_members .ignore_presence_toggle.active {
+	filter: drop-shadow(0px 0px 5px rgb(243, 65, 65));
+}
