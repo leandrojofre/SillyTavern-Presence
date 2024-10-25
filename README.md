@@ -48,7 +48,7 @@ As such this plugin always assumes it was the MOST RECENT message that was delet
 Due to the way SillyTavern handles events, there is no way to tell if a message is being generated on behalf of the user (i.e. using the impersonate button).  
 SillyTavern uses a random character to generate the message for the user, and so the impersonation will be limited to information in that character's memory.  
 
-The work around is to change a few lines of code in SillyTavern/Public/script.js  
+The work around is to change a few lines of code in SillyTavern/Public/group-chats.js  
 
 Change   
 
