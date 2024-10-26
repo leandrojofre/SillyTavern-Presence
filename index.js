@@ -113,12 +113,30 @@ const onChatChanged = async () => {
 	$(document).on("mouseup touchend", "#show_more_messages", addPresenceTrackerToMessages);
 };
 
-const onGroupMemeberDrafted = async (e) => {
+const onGenerationAfterCommands = async (type, config, dryRun) => {
 	if (!isGroupChat()) return;
 
-	const char = characters[e].avatar;
+	eventSource.once(event_types.GROUP_MEMBER_DRAFTED, draftHandler);
+	eventSource.once(event_types.GENERATION_STOPPED, stopHandler);
 
-	if (e.length > 1 || chat_metadata.ignore_presence?.includes(char)) {
+	async function draftHandler(...args) {
+		log("GROUP_MEMBER_DRAFTED", args);
+		eventSource.removeListener(event_types.GENERATION_STOPPED, stopHandler);
+		onGroupMemeberDrafted(type, args[0]);
+		return;
+	}
+
+	async function stopHandler() {
+		eventSource.removeListener(event_types.GROUP_MEMBER_DRAFTED, draftHandler);
+	}
+};
+
+const onGroupMemeberDrafted = async (type, charId) => {
+	if (!isGroupChat()) return;
+
+	const char = characters[charId].avatar;
+
+	if (type == "impersonate" || chat_metadata.ignore_presence?.includes(char)) {
 		debug("Impersonation detected");
 		//reveal all history for impersonation
 		hideChatMessageRange(0, chat.length - 1, true);
@@ -240,9 +258,9 @@ eventSource.on(event_types.USER_MESSAGE_RENDERED, async (...args) => {
 	return;
 });
 
-eventSource.on(event_types.GROUP_MEMBER_DRAFTED, async (...args) => {
-	log("GROUP_MEMBER_DRAFTED", args);
-	onGroupMemeberDrafted(...args);
+eventSource.on(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
+	log("GENERATION_AFTER_COMMANDS", args);
+	onGenerationAfterCommands(...args);
 	return;
 });
 eventSource.on(event_types.MESSAGE_RECEIVED, async (...args) => {
