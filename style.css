@@ -101,3 +101,8 @@
 #rm_group_members .ignore_presence_toggle.active {
 	filter: drop-shadow(0px 0px 5px rgb(243, 65, 65));
 }
+
+.mes_block > .ch_name > .flex1 {
+	flex-wrap: nowrap;
+	align-items: flex-start;
+}

@@ -15,6 +15,7 @@ const defaultSettings = {};
 let debugMode = false;
 
 const log = (...msg) => console.log("[" + extensionName + "]", ...msg);
+const warn = (...msg) => console.warn("[" + extensionName + "] Warning", ...msg);
 const debug = (...msg) => {
 	if (debugMode) {
 		console.log("[" + extensionName + " debug]", ...msg);
@@ -77,7 +78,7 @@ const addPresenceTrackerToMessages = async (refresh) => {
 		});
 
 		if (element.hasAttribute("has_presence_tracker")) return;
-		$(".mes_block", element).append(presenceTracker);
+		$(".mes_block > .ch_name > .flex1", element).append(presenceTracker);
 		element.setAttribute("has_presence_tracker", true);
 	});
 };
@@ -151,7 +152,7 @@ const commandForget = async (namedArgs, charName) => {
 	const charMessages = chat.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => m.present.includes(char));
 
 	for (const charMes of charMessages) {
-		console.log(charMes);
+		log(charMes);
 		messages[charMes.id].present = charMes.present.filter((m) => m != char);
 	}
 
@@ -208,14 +209,14 @@ const migrateOldTrackingData = async () => {
 			});
 		});
 
-		const mesages = chat;
+		const messages = chat;
 
 		Object.keys(newData).forEach((mesId) => {
-			if (mesages[mesId]) mesages[mesId].present = newData[mesId];
+			if (messages[mesId]) messages[mesId].present = newData[mesId];
 		});
 
-		console.log("Migrated old tracking data");
-		console.log(newData);
+		log("Migrated old tracking data");
+		log(newData);
 		await saveChatDebounced();
 		delete extension_settings[extensionName][getCurrentChatId()];
 	}
@@ -260,7 +261,7 @@ SlashCommandParser.addCommandObject(
 		name: "presenceForget",
 		callback: async (args, value) => {
 			if (!value) {
-				console.warn("WARN: No character name provided for /presenceForget command");
+				warn("WARN: No character name provided for /presenceForget command");
 				return;
 			}
 			value = value.trim();
