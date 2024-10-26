@@ -18,12 +18,24 @@ It simple disables itself if you are not in a group chat.
 ### Group chats
 In a group chat this plugin will restrict each character's memory to what they were there for.  
 This is done by hiding all messages that they don't remember.  
+
+Each message will have a little icon for each character who was 'present' for that message.  
+![little icons to show who is present](images/small-icons.png)  
   
-You can control who is 'present' (i.e. who remebers things) by enabling or disabling automatic replies from that character.  
+You can control who is 'present' (i.e. who remembers things) by enabling or disabling automatic replies from that character.  
 Characters remember two things:   
 	- 1 messages they were present for   
 	- 2 the message directly before the one they are replying to, this is only short in short term memory while they are "typing" but moves to long term memory when their message actually gets sent.  
   
+You can also change who was present for a message after it is recieved, hover over the little icons that show who was present and they will expand and show an icon for everyone whether they were there or not. Just click an icon to change whether that character was present.  
+![big icons you can click to toggle](images/large-icons.png)  
+
+#### The all seeing narrator
+If you have a character who should see everything (such as a narrator) then can head to the character management panel where you'll find a new button next to each character.  
+![an extra button next to each character in the shape of an eye with a slash through it](images/char-panel.png)  
+Click this button and it lights up, that will indicate that this character can see EVERYTHING.
+
+
 ### Commands
 Currently there is only one command.  
 	/presenceforget "Character name"  
@@ -32,17 +44,6 @@ This command COMPLETELY and IRREVERSIBLY wipes the memory of the given character
 
 
 ## Problems / TODO
-### Starting a group chat
-When you start a group chat there's a message from each person in the group. However because these weren't sent by the characters through the usual system, they are not picked up by any characters. No one remembers these.  
-
-### Branching chats
-Character memory is tied to the chatID and does not transfer over to new branches because they have new chatIDs.  
-This is currently an intentional work around to stop characters remembering messages from the original chat chain after the branch point.  
-There are better ways to do this but they would involve changing how data is saved.  
-
-### Deleting messages
-Due to the way SillyTavern handles events, there is no way to tell what message was being deleted.
-As such this plugin always assumes it was the MOST RECENT message that was deleted, and it updates characters' memories accordingly
 
 ### Impersonations
 Due to the way SillyTavern handles events, there is no way to tell if a message is being generated on behalf of the user (i.e. using the impersonate button).  
