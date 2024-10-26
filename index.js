@@ -184,9 +184,9 @@ const updatePresenceTrackingButton = async (member) => {
 	const charId = member.attr("chid");
 
 	if (!chat_metadata.ignore_presence.includes(characters[charId].avatar)) {
-		target.removeClass("fa-eye-slash").removeClass("active").addClass("fa-eye");
+		target.removeClass("active");
 	} else {
-		target.removeClass("fa-eye").addClass("fa-eye-slash").addClass("active");
+		target.addClass("active");
 	}
 };
 
@@ -282,7 +282,7 @@ SlashCommandParser.addCommandObject(
 
 jQuery(async () => {
 	const groupMemberTemplateIcons = $(".group_member_icon");
-	const ignorePresenceButton = $(`<div title="Ignore Presence" class="ignore_presence_toggle fa-solid fa-eye right_menu_button fa-lg interactable" tabindex="0"></div>`);
+	const ignorePresenceButton = $(`<div title="Ignore Presence" class="ignore_presence_toggle fa-solid fa-eye-slash right_menu_button fa-lg interactable" tabindex="0"></div>`);
 
 	groupMemberTemplateIcons.before(ignorePresenceButton);
 
