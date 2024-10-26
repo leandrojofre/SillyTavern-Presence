@@ -281,7 +281,7 @@ SlashCommandParser.addCommandObject(
 );
 
 jQuery(async () => {
-	const groupMemberTemplateIcons = $("#group_member_template .group_member_icon");
+	const groupMemberTemplateIcons = $(".group_member_icon");
 	const ignorePresenceButton = $(`<div title="Ignore Presence" class="ignore_presence_toggle fa-solid fa-eye right_menu_button fa-lg interactable" tabindex="0"></div>`);
 
 	groupMemberTemplateIcons.before(ignorePresenceButton);
