@@ -43,22 +43,6 @@ This command COMPLETELY and IRREVERSIBLY wipes the memory of the given character
 
 
 
-## Problems / TODO
-
-### Impersonations
-Due to the way SillyTavern handles events, there is no way to tell if a message is being generated on behalf of the user (i.e. using the impersonate button).  
-SillyTavern uses a random character to generate the message for the user, and so the impersonation will be limited to information in that character's memory.  
-
-The work around is to change a few lines of code in SillyTavern/Public/group-chats.js  
-
-Change   
-
-	await eventSource.emit(event_types.GROUP_MEMBER_DRAFTED, chId);  
-To  
-
-	if(type == 'impersonate') {  
-		await eventSource.emit(event_types.GROUP_MEMBER_DRAFTED, chId, 'impersonate');  
-	} else {  
-		await eventSource.emit(event_types.GROUP_MEMBER_DRAFTED, chId);  
-	}  
-Approx line 880
+## TODO
+Think through whether there are any commands needed.
+Receive feedback and bug reports
