@@ -1,4 +1,4 @@
-import { chat, chat_metadata, getCurrentChatId, characters, saveChatDebounced, saveSettingsDebounced, eventSource, event_types } from "../../../../script.js";
+import { chat, chat_metadata, getCurrentChatId, characters, saveChatDebounced, eventSource, event_types } from "../../../../script.js";
 import { groups, selected_group, is_group_generating } from "../../../../scripts/group-chats.js";
 import { hideChatMessageRange } from "../../../chats.js";
 import { extension_settings } from "../../../extensions.js";
@@ -8,9 +8,6 @@ import { ARGUMENT_TYPE, SlashCommandArgument } from "../../../slash-commands/Sla
 import { SlashCommandParser } from "../../../slash-commands/SlashCommandParser.js";
 
 const extensionName = "Presence";
-const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
-const extensionSettings = extension_settings[extensionName];
-const defaultSettings = {};
 
 let debugMode = false;
 
@@ -120,9 +117,9 @@ const onGenerationAfterCommands = async (type, config, dryRun) => {
 	eventSource.once(event_types.GENERATION_STOPPED, stopHandler);
 
 	async function draftHandler(...args) {
-		log("GROUP_MEMBER_DRAFTED", args);
+		debug("GROUP_MEMBER_DRAFTED", args);
 		eventSource.removeListener(event_types.GENERATION_STOPPED, stopHandler);
-		onGroupMemeberDrafted(type, args[0]);
+		onGroupMemberDrafted(type, args[0]);
 		return;
 	}
 
@@ -131,7 +128,7 @@ const onGenerationAfterCommands = async (type, config, dryRun) => {
 	}
 };
 
-const onGroupMemeberDrafted = async (type, charId) => {
+const onGroupMemberDrafted = async (type, charId) => {
 	if (!isGroupChat()) return;
 
 	const char = characters[charId].avatar;
