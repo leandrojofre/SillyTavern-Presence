@@ -1,5 +1,5 @@
 import { chat, chat_metadata, getCurrentChatId, characters, saveChatDebounced, saveSettingsDebounced, eventSource, event_types } from "../../../../script.js";
-import { groups, selected_group } from "../../../../scripts/group-chats.js";
+import { groups, selected_group, is_group_generating } from "../../../../scripts/group-chats.js";
 import { hideChatMessageRange } from "../../../chats.js";
 import { extension_settings } from "../../../extensions.js";
 import { commonEnumProviders } from "../../../slash-commands/SlashCommandCommonEnumsProvider.js";
@@ -114,7 +114,7 @@ const onChatChanged = async () => {
 };
 
 const onGenerationAfterCommands = async (type, config, dryRun) => {
-	if (!isGroupChat()) return;
+	if (!isGroupChat() && !is_group_generating) return;
 
 	eventSource.once(event_types.GROUP_MEMBER_DRAFTED, draftHandler);
 	eventSource.once(event_types.GENERATION_STOPPED, stopHandler);
