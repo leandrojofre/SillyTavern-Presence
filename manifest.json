@@ -1,6 +1,6 @@
 {
     "display_name": "Presence",
-    "loading_order": 100,
+    "loading_order": 200,
     "requires": [],
     "optional": [],
     "js": "index.js",
