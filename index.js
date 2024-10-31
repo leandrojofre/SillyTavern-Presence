@@ -1,4 +1,4 @@
-import { chat, chat_metadata, getCurrentChatId, characters, saveChatDebounced, eventSource, event_types } from "../../../../script.js";
+import { chat, chat_metadata, getCurrentChatId, characters, saveChatDebounced, eventSource, event_types, saveSettingsDebounced } from "../../../../script.js";
 import { groups, selected_group, is_group_generating } from "../../../../scripts/group-chats.js";
 import { hideChatMessageRange } from "../../../chats.js";
 import { extension_settings } from "../../../extensions.js";
@@ -58,11 +58,17 @@ const onNewMessage = async (mesId) => {
 };
 
 const addPresenceTrackerToMessages = async (refresh) => {
-	let selector = "#chat .mes:not(.smallSysMes";
-	if (!refresh) selector += ",[has_presence_tracker=true]";
-	selector += ")";
+	if (refresh) {
+		let trackers = $("#chat .mes_presence_tracker");
+		let messages = trackers.closest(".mes");
+		trackers.remove();
+		messages.removeAttr("has_presence_tracker");
+	}
+	let selector = "#chat .mes:not(.smallSysMes,[has_presence_tracker=true])";
 
-	if (refresh) $("#chat .mes_presence_tracker").remove();
+	if (refresh) {
+		$("#chat .mes_presence_tracker").remove();
+	}
 
 	$(selector).each(async (index, element) => {
 		const mesId = $(element).attr("mesid");
@@ -92,6 +98,7 @@ const addPresenceTrackerToMessages = async (refresh) => {
 			presenceTracker.append(memberIcon);
 		});
 
+		if (element.hasAttribute("has_presence_tracker")) return;
 		if (extensionSettings.location == "top") $(".mes_block > .ch_name > .flex1", element).append(presenceTracker);
 		else if (extensionSettings.location == "bottom") $(".mes_block", element).append(presenceTracker);
 		element.setAttribute("has_presence_tracker", true);
@@ -384,6 +391,7 @@ jQuery(async () => {
 	const settingsHtml = $(await $.get(`${extensionFolderPath}/html/settings.html`));
 
 	settingsHtml.find("#presence_enable").prop("checked", extensionSettings.enabled);
+	settingsHtml.find("#presence_location").val(extensionSettings.location);
 	settingsHtml.find("#presence_debug").prop("checked", extensionSettings.debugMode);
 
 	settingsHtml.find("#presence_enable").on("change", (e) => {
