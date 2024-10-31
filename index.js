@@ -8,14 +8,30 @@ import { ARGUMENT_TYPE, SlashCommandArgument } from "../../../slash-commands/Sla
 import { SlashCommandParser } from "../../../slash-commands/SlashCommandParser.js";
 
 const extensionName = "Presence";
-
-let debugMode = false;
+const extensionNameLong = `SillyTavern-${extensionName}`;
+const extensionFolderPath = `scripts/extensions/third-party/${extensionNameLong}`;
+const extensionSettings = extension_settings[extensionName];
+const defaultSettings = {
+	enabled: true,
+	location: "top",
+	debugMode: false,
+};
 
 const log = (...msg) => console.log("[" + extensionName + "]", ...msg);
 const warn = (...msg) => console.warn("[" + extensionName + "] Warning", ...msg);
 const debug = (...msg) => {
-	if (debugMode) {
+	if (extensionSettings.debugMode) {
 		console.log("[" + extensionName + " debug]", ...msg);
+	}
+};
+
+const initSettings = async () => {
+	if (!extensionSettings || extensionSettings == {}) {
+		extensionSettings[extensionName] = defaultSettings;
+		saveSettingsDebounced();
+	} else if (extensionSettings.enabled == undefined) {
+		extensionSettings[extensionName] = { ...defaultSettings, ...extensionSettings };
+		saveSettingsDebounced();
 	}
 };
 
@@ -29,12 +45,12 @@ const getCurrentParticipants = async () => {
 	return { members: group.members, present: active };
 };
 
-const isGroupChat = () => {
-	return selected_group != null;
+const isActive = () => {
+	return selected_group != null && extensionSettings.enabled;
 };
 
 const onNewMessage = async (mesId) => {
-	if (!isGroupChat()) return;
+	if (!isActive()) return;
 	const mes = await getMessage(mesId);
 	mes.present = (await getCurrentParticipants()).present;
 	await saveChatDebounced();
@@ -45,6 +61,8 @@ const addPresenceTrackerToMessages = async (refresh) => {
 	let selector = "#chat .mes:not(.smallSysMes";
 	if (!refresh) selector += ",[has_presence_tracker=true]";
 	selector += ")";
+
+	if (refresh) $("#chat .mes_presence_tracker").remove();
 
 	$(selector).each(async (index, element) => {
 		const mesId = $(element).attr("mesid");
@@ -74,8 +92,8 @@ const addPresenceTrackerToMessages = async (refresh) => {
 			presenceTracker.append(memberIcon);
 		});
 
-		if (element.hasAttribute("has_presence_tracker")) return;
-		$(".mes_block > .ch_name > .flex1", element).append(presenceTracker);
+		if (extensionSettings.location == "top") $(".mes_block > .ch_name > .flex1", element).append(presenceTracker);
+		else if (extensionSettings.location == "bottom") $(".mes_block", element).append(presenceTracker);
 		element.setAttribute("has_presence_tracker", true);
 	});
 };
@@ -95,7 +113,7 @@ const updateMessagePresence = async (mesId, member, isPresent) => {
 const onChatChanged = async () => {
 	$(document).off("mouseup touchend", "#show_more_messages", addPresenceTrackerToMessages);
 
-	if (!isGroupChat()) {
+	if (!isActive()) {
 		return;
 	}
 
@@ -111,7 +129,7 @@ const onChatChanged = async () => {
 };
 
 const onGenerationAfterCommands = async (type, config, dryRun) => {
-	if (!isGroupChat() && !is_group_generating) return;
+	if (!isActive() && !is_group_generating) return;
 
 	eventSource.once(event_types.GROUP_MEMBER_DRAFTED, draftHandler);
 	eventSource.once(event_types.GENERATION_STOPPED, stopHandler);
@@ -128,8 +146,8 @@ const onGenerationAfterCommands = async (type, config, dryRun) => {
 	}
 };
 
-const onGroupMemberDrafted = async (type, charId) => {
-	if (!isGroupChat()) return;
+const onGroupMemeberDrafted = async (type, charId) => {
+	if (!isActive()) return;
 
 	const char = characters[charId].avatar;
 
@@ -158,7 +176,7 @@ const onGroupMemberDrafted = async (type, charId) => {
 };
 
 const commandForget = async (namedArgs, charName) => {
-	if (!isGroupChat()) return;
+	if (!isActive()) return;
 	if (charName.length == 0) return;
 
 	const char = characters.find((c) => c.name == charName).avatar;
@@ -167,7 +185,7 @@ const commandForget = async (namedArgs, charName) => {
 	const charMessages = chat.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => m.present.includes(char));
 
 	for (const charMes of charMessages) {
-		log(charMes);
+		debug(charMes);
 		messages[charMes.id].present = charMes.present.filter((m) => m != char);
 	}
 
@@ -198,7 +216,7 @@ const updatePresenceTrackingButton = async (member) => {
 	const target = member.find(".ignore_presence_toggle");
 	const charId = member.attr("chid");
 
-	if (!chat_metadata.ignore_presence.includes(characters[charId].avatar)) {
+	if (!chat_metadata?.ignore_presence?.includes(characters[charId].avatar)) {
 		target.removeClass("active");
 	} else {
 		target.addClass("active");
@@ -231,7 +249,7 @@ const migrateOldTrackingData = async () => {
 		});
 
 		log("Migrated old tracking data");
-		log(newData);
+		debug(newData);
 		await saveChatDebounced();
 		delete extension_settings[extensionName][getCurrentChatId()];
 	}
@@ -314,4 +332,29 @@ jQuery(async () => {
 		}
 	});
 	observer.observe(groupMemberList, { childList: true, subtree: true });
+
+	// Add Settings Panel
+	await initSettings();
+	const settingsHtml = $(await $.get(`${extensionFolderPath}/html/settings.html`));
+
+	settingsHtml.find("#presence_enable").prop("checked", extensionSettings.enabled);
+	settingsHtml.find("#presence_debug").prop("checked", extensionSettings.debugMode);
+
+	settingsHtml.find("#presence_enable").on("change", (e) => {
+		extensionSettings.enabled = $(e.target).prop("checked");
+		saveSettingsDebounced();
+	});
+
+	settingsHtml.find("#presence_location").on("change", (e) => {
+		extensionSettings.location = $(e.target).val();
+		saveSettingsDebounced();
+		addPresenceTrackerToMessages(true);
+	});
+
+	settingsHtml.find("#presence_debug").on("change", (e) => {
+		extensionSettings.debugMode = $(e.target).prop("checked");
+		saveSettingsDebounced();
+	});
+
+	$("#extensions_settings").append(settingsHtml);
 });
