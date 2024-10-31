@@ -192,6 +192,28 @@ const commandForget = async (namedArgs, charName) => {
 	log("Wiped the memory of", charName);
 
 	saveChatDebounced();
+	addPresenceTrackerToMessages(true);
+};
+
+const commandRememberAll = async (namedArgs, charName) => {
+	if (!isActive()) return;
+	if (charName.length == 0) return;
+
+	const char = characters.find((c) => c.name == charName).avatar;
+
+	const messages = chat;
+	const charMessages = chat.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => !m.present.includes(char));
+
+	for (const charMes of charMessages) {
+		debug(charMes);
+		if (!messages[charMes.id].present) messages[charMes.id].present = [];
+		messages[charMes.id].present.push(char);
+	}
+
+	log("Added all messages to the memory of ", charName);
+
+	saveChatDebounced();
+	addPresenceTrackerToMessages(true);
 };
 
 const togglePresenceTracking = async (e) => {
@@ -310,6 +332,30 @@ SlashCommandParser.addCommandObject(
 			}),
 		],
 		helpString: "Wipes the memory of a character. Usage /presenceForget <name>",
+	})
+);
+
+SlashCommandParser.addCommandObject(
+	SlashCommand.fromProps({
+		name: "presenceRememberAll",
+		callback: async (args, value) => {
+			if (!value) {
+				warn("WARN: No character name provided for /presenceRememberAll command");
+				return;
+			}
+			value = value.trim();
+			await commandRememberAll(args, value);
+			return "";
+		},
+		unnamedArgumentList: [
+			SlashCommandArgument.fromProps({
+				description: "name",
+				typeList: [ARGUMENT_TYPE.STRING],
+				isRequired: true,
+				enumProvider: commonEnumProviders.characters("all"),
+			}),
+		],
+		helpString: "Adds all messages to the memory of a character. Usage /presenceRememberAll <name>",
 	})
 );
 
