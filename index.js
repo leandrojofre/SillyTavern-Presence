@@ -137,7 +137,7 @@ const onGenerationAfterCommands = async (type, config, dryRun) => {
 	async function draftHandler(...args) {
 		debug("GROUP_MEMBER_DRAFTED", args);
 		eventSource.removeListener(event_types.GENERATION_STOPPED, stopHandler);
-		onGroupMemberDrafted(type, args[0]);
+		onGroupMemeberDrafted(type, args[0]);
 		return;
 	}
 
