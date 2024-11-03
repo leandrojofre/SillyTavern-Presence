@@ -10,6 +10,7 @@ import { SlashCommandParser } from "../../../slash-commands/SlashCommandParser.j
 const extensionName = "Presence";
 
 let debugMode = false;
+let seeLast = true;
 
 const log = (...msg) => console.log("[" + extensionName + "]", ...msg);
 const warn = (...msg) => console.warn("[" + extensionName + "] Warning", ...msg);
@@ -37,6 +38,12 @@ const onNewMessage = async (mesId) => {
 	if (!isGroupChat()) return;
 	const mes = await getMessage(mesId);
 	mes.present = (await getCurrentParticipants()).present;
+	if(!mes.is_user) {
+		const prevMes = await getMessage(mesId - 1);
+		if(prevMes.present.indexOf(mes.original_avatar) == -1){
+			prevMes.present += mes.original_avatar;
+		}
+	}
 	await saveChatDebounced();
 	debug("Present members added to last message");
 };
@@ -315,3 +322,14 @@ jQuery(async () => {
 	});
 	observer.observe(groupMemberList, { childList: true, subtree: true });
 });
+
+//init seeLast
+if(!extension_settings[extensionName]) {
+	extension_settings[extensionName] = {};
+}
+
+if(extension_settings[extensionName]["seeLast"]) {
+	seeLast = extension_settings[extensionName]["seeLast"];
+} else {
+	extension_settings[extensionName]["seeLast"] = seeLast;
+}
