@@ -171,7 +171,7 @@ const onGenerationAfterCommands = async (type, config, dryRun) => {
 };
 
 const toggleVisibilityAllMessages = async (state = true) => {
-    hideChatMessageRange(0, chat.length - 1, state);
+	hideChatMessageRange(0, chat.length - 1, state);
 }
 
 const onGroupMemberDrafted = async (type, charId) => {
@@ -182,11 +182,11 @@ const onGroupMemberDrafted = async (type, charId) => {
 	if (type == "impersonate" || chat_metadata.ignore_presence?.includes(char)) {
 		debug("Impersonation detected");
 		//reveal all history for impersonation
-        toggleVisibilityAllMessages(true);
+        	toggleVisibilityAllMessages(true);
 	} else {
 		//handle NPC draft
 		//hide all messages
-        toggleVisibilityAllMessages(false);
+		toggleVisibilityAllMessages(false);
 
 		const messages = chat.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => m.present.includes(char));
 
@@ -332,7 +332,7 @@ eventSource.on(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
 const messageReceived = async (...args) => {
 	log("MESSAGE_RECEIVED", args);
 	onNewMessage(...args);
-    toggleVisibilityAllMessages(true);
+	toggleVisibilityAllMessages(true);
 	return;
 };
 
