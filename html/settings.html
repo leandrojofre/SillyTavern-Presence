@@ -1,0 +1,30 @@
+<div id="presence_settings" class="extension_container">
+	<div class="inline-drawer">
+		<div class="inline-drawer-toggle inline-drawer-header">
+			<b>Presence</b>
+			<div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+		</div>
+		<div class="inline-drawer-content">
+			<div class="presence-block flex-container">
+				<input id="presence_enable" type="checkbox" />
+				<label for="presence_enable">Enable Presence</label>
+			</div>
+			<div class="presence-block m-b-1 m-t-1">
+				<label for="presence_location">Message Presence Tracker Location</label>
+				<small>Select the location for the presence tracker on messages.</small>
+				<select class="flex1 margin0" id="presence_location">
+					<option value="top">Top</option>
+					<option value="bottom">Bottom</option>
+				</select>
+			</div>
+			<div class="presence-block flex-container">
+				<input id="presence_seeLast" type="checkbox" />
+				<label for="presence_seeLast">Characters always see the message they are replying to.</label>
+			</div>
+			<div class="presence-block flex-container">
+				<input id="presence_debug" type="checkbox" />
+				<label for="presence_debug">Enable Debug Logging</label>
+			</div>
+		</div>
+	</div>
+</div>
