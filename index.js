@@ -8,6 +8,7 @@ import { ARGUMENT_TYPE, SlashCommandArgument } from "../../../slash-commands/Sla
 import { SlashCommandParser } from "../../../slash-commands/SlashCommandParser.js";
 
 const extensionName = "Presence";
+
 const extensionNameLong = `SillyTavern-${extensionName}`;
 const extensionFolderPath = `scripts/extensions/third-party/${extensionNameLong}`;
 const extensionSettings = extension_settings[extensionName];
@@ -15,7 +16,9 @@ const defaultSettings = {
 	enabled: true,
 	location: "top",
 	debugMode: false,
+  seeLast: true,
 };
+
 
 const log = (...msg) => console.log("[" + extensionName + "]", ...msg);
 const warn = (...msg) => console.warn("[" + extensionName + "] Warning", ...msg);
@@ -53,6 +56,12 @@ const onNewMessage = async (mesId) => {
 	if (!isActive()) return;
 	const mes = await getMessage(mesId);
 	mes.present = (await getCurrentParticipants()).present;
+	if(extensionSettings.seeLast && !mes.is_user) {
+		const prevMes = await getMessage(mesId - 1);
+		if(prevMes.present.indexOf(mes.original_avatar) == -1){
+			prevMes.present += mes.original_avatar;
+		}
+	}
 	await saveChatDebounced();
 	debug("Present members added to last message");
 };
