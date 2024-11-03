@@ -16,12 +16,12 @@ const defaultSettings = {
 	enabled: true,
 	location: "top",
 	debugMode: false,
-  seeLast: true,
+	seeLast: true,
 };
 
 
 const log = (...msg) => console.log("[" + extensionName + "]", ...msg);
-const warn = (...msg) => console.warn("[" + extensionName + "] Warning", ...msg);
+const warn = (...msg) => console.warn("[" + extensionName + " Warning]", ...msg);
 const debug = (...msg) => {
 	if (extensionSettings.debugMode) {
 		console.log("[" + extensionName + " debug]", ...msg);
@@ -56,10 +56,18 @@ const onNewMessage = async (mesId) => {
 	if (!isActive()) return;
 	const mes = await getMessage(mesId);
 	mes.present = (await getCurrentParticipants()).present;
+	debug("seeLast", extensionSettings.seeLast);
+	debug("is_user", mes.is_user);
+	debug("original_avatar", mes.original_avatar);
 	if(extensionSettings.seeLast && !mes.is_user) {
 		const prevMes = await getMessage(mesId - 1);
-		if(prevMes.present.indexOf(mes.original_avatar) == -1){
-			prevMes.present += mes.original_avatar;
+		debug(prevMes);
+		if(!prevMes.present){
+			prevMes.present = [];
+		}
+		if(!prevMes.present.includes(mes.original_avatar)){
+			prevMes.present.push(mes.original_avatar);
+			debug(prevMes.present);
 		}
 	}
 	await saveChatDebounced();
@@ -401,6 +409,7 @@ jQuery(async () => {
 
 	settingsHtml.find("#presence_enable").prop("checked", extensionSettings.enabled);
 	settingsHtml.find("#presence_location").val(extensionSettings.location);
+	settingsHtml.find("#presence_seeLast").prop("checked", extensionSettings.seeLast);
 	settingsHtml.find("#presence_debug").prop("checked", extensionSettings.debugMode);
 
 	settingsHtml.find("#presence_enable").on("change", (e) => {
@@ -412,6 +421,11 @@ jQuery(async () => {
 		extensionSettings.location = $(e.target).val();
 		saveSettingsDebounced();
 		addPresenceTrackerToMessages(true);
+	});
+
+	settingsHtml.find("#presence_seeLast").on("change", (e) => {
+		extensionSettings.seeLast = $(e.target).prop("checked");
+		saveSettingsDebounced();
 	});
 
 	settingsHtml.find("#presence_debug").on("change", (e) => {
