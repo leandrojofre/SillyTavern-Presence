@@ -31,10 +31,10 @@ const debug = (...msg) => {
 const initSettings = async () => {
 	if (!extensionSettings || extensionSettings == {}) {
         extension_settings[extensionName] = defaultSettings;
-        extensionSettings = extension_settings[extensionName];
+        extensionSettings = defaultSettings;
 		saveSettingsDebounced();
 	} else if (extensionSettings.enabled == undefined) {
-		extensionSettings[extensionName] = { ...defaultSettings, ...extensionSettings };
+        extension_settings[extensionName] = { ...defaultSettings, ...extensionSettings };
 		saveSettingsDebounced();
 	}
 };
