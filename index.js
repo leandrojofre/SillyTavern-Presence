@@ -1,10 +1,10 @@
-import { chat, chat_metadata, getCurrentChatId, characters, saveChatDebounced, eventSource, event_types, saveSettingsDebounced } from "../../../../script.js";
-import { groups, selected_group, is_group_generating } from "../../../../scripts/group-chats.js";
+import { characters, chat, chat_metadata, eventSource, event_types, getCurrentChatId, saveChatDebounced, saveSettingsDebounced } from "../../../../script.js";
+import { groups, is_group_generating, selected_group } from "../../../../scripts/group-chats.js";
 import { hideChatMessageRange } from "../../../chats.js";
 import { extension_settings } from "../../../extensions.js";
-import { commonEnumProviders } from "../../../slash-commands/SlashCommandCommonEnumsProvider.js";
 import { SlashCommand } from "../../../slash-commands/SlashCommand.js";
 import { ARGUMENT_TYPE, SlashCommandArgument } from "../../../slash-commands/SlashCommandArgument.js";
+import { commonEnumProviders } from "../../../slash-commands/SlashCommandCommonEnumsProvider.js";
 import { SlashCommandParser } from "../../../slash-commands/SlashCommandParser.js";
 
 const extensionName = "Presence";
@@ -347,6 +347,15 @@ const messageSent = async (...args) => {
 
 eventSource.on(event_types.MESSAGE_SENT, messageSent);
 eventSource.makeLast(event_types.MESSAGE_SENT, messageSent);
+
+const generationStopped = async (...args) => {
+	log("GENERATION_STOPPED", args);
+	toggleVisibilityAllMessages(true);
+	return;
+};
+
+eventSource.on(event_types.GENERATION_STOPPED, generationStopped);
+eventSource.makeFirst(event_types.GENERATION_STOPPED, generationStopped);
 
 SlashCommandParser.addCommandObject(
 	SlashCommand.fromProps({
