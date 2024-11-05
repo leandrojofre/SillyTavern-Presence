@@ -175,7 +175,7 @@ const toggleVisibilityAllMessages = async (state = true) => {
 }
 
 const onGroupMemberDrafted = async (type, charId) => {
-	if (!isGroupChat()) return;
+	if (!isActive()) return;
 
 	const char = characters[charId].avatar;
 
