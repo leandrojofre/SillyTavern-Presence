@@ -45,7 +45,13 @@ const getMessage = async (mesId) => {
 
 const getCurrentParticipants = async () => {
 	const group = groups.find((g) => g.id == selected_group);
-	var active = group.members.filter((m) => !group.disabled_members.includes(m));
+	var active = [...group.members];
+	
+	debug("includeMuted", extensionSettings.includeMuted);
+
+	if (!extensionSettings.includeMuted)
+		active = active.filter((m) => !group.disabled_members.includes(m));
+
 	return { members: group.members, present: active };
 };
 
@@ -55,23 +61,30 @@ const isActive = () => {
 
 const onNewMessage = async (mesId) => {
 	if (!isActive()) return;
+
 	const mes = await getMessage(mesId);
+
 	mes.present = (await getCurrentParticipants()).present;
+
 	debug("seeLast", extensionSettings.seeLast);
 	debug("is_user", mes.is_user);
 	debug("original_avatar", mes.original_avatar);
+
 	if(extensionSettings.seeLast && !mes.is_user) {
 		const prevMes = await getMessage(mesId - 1);
+
 		debug(prevMes);
-		if(!prevMes.present){
-			prevMes.present = [];
-		}
+
+		if(!prevMes.present) prevMes.present = [];
+
 		if(!prevMes.present.includes(mes.original_avatar)){
 			prevMes.present.push(mes.original_avatar);
 			debug(prevMes.present);
 		}
 	}
+
 	await saveChatDebounced();
+
 	debug("Present members added to last message");
 };
 
@@ -454,7 +467,6 @@ jQuery(async () => {
 
 	settingsHtml.find("#presence_includeMuted").on("change", (e) => {
 		extensionSettings.includeMuted = $(e.target).prop("checked");
-		debug("[includeMuted: value]", extensionSettings.includeMuted);
 		saveSettingsDebounced();
 	});
 
