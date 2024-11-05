@@ -17,6 +17,7 @@ const defaultSettings = {
 	location: "top",
 	debugMode: false,
 	seeLast: true,
+	includeMuted: false,
 };
 
 
@@ -432,6 +433,7 @@ jQuery(async () => {
 	settingsHtml.find("#presence_enable").prop("checked", extensionSettings.enabled);
 	settingsHtml.find("#presence_location").val(extensionSettings.location);
 	settingsHtml.find("#presence_seeLast").prop("checked", extensionSettings.seeLast);
+	settingsHtml.find("#presence_includeMuted").prop("checked", extensionSettings.includeMuted);
 	settingsHtml.find("#presence_debug").prop("checked", extensionSettings.debugMode);
 
 	settingsHtml.find("#presence_enable").on("change", (e) => {
@@ -447,6 +449,12 @@ jQuery(async () => {
 
 	settingsHtml.find("#presence_seeLast").on("change", (e) => {
 		extensionSettings.seeLast = $(e.target).prop("checked");
+		saveSettingsDebounced();
+	});
+
+	settingsHtml.find("#presence_includeMuted").on("change", (e) => {
+		extensionSettings.includeMuted = $(e.target).prop("checked");
+		debug("[includeMuted: value]", extensionSettings.includeMuted);
 		saveSettingsDebounced();
 	});
 
