@@ -161,7 +161,7 @@ const onGenerationAfterCommands = async (type, config, dryRun) => {
 	async function draftHandler(...args) {
 		debug("GROUP_MEMBER_DRAFTED", args);
 		eventSource.removeListener(event_types.GENERATION_STOPPED, stopHandler);
-		onGroupMemeberDrafted(type, args[0]);
+		onGroupMemberDrafted(type, args[0]);
 		return;
 	}
 
@@ -170,19 +170,23 @@ const onGenerationAfterCommands = async (type, config, dryRun) => {
 	}
 };
 
-const onGroupMemeberDrafted = async (type, charId) => {
-	if (!isActive()) return;
+const toggleVisibilityAllMessages = async (state = true) => {
+	hideChatMessageRange(0, chat.length - 1, state);
+}
+
+const onGroupMemberDrafted = async (type, charId) => {
+	if (!isGroupChat()) return;
 
 	const char = characters[charId].avatar;
 
 	if (type == "impersonate" || chat_metadata.ignore_presence?.includes(char)) {
 		debug("Impersonation detected");
 		//reveal all history for impersonation
-		hideChatMessageRange(0, chat.length - 1, true);
+        	toggleVisibilityAllMessages(true);
 	} else {
 		//handle NPC draft
 		//hide all messages
-		hideChatMessageRange(0, chat.length - 1, false);
+		toggleVisibilityAllMessages(false);
 
 		const messages = chat.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => m.present.includes(char));
 
@@ -324,16 +328,25 @@ eventSource.on(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
 	onGenerationAfterCommands(...args);
 	return;
 });
-eventSource.on(event_types.MESSAGE_RECEIVED, async (...args) => {
+
+const messageReceived = async (...args) => {
 	log("MESSAGE_RECEIVED", args);
 	onNewMessage(...args);
+	toggleVisibilityAllMessages(true);
 	return;
-});
-eventSource.on(event_types.MESSAGE_SENT, async (...args) => {
+};
+
+eventSource.on(event_types.MESSAGE_RECEIVED, messageReceived);
+eventSource.makeFirst(event_types.MESSAGE_RECEIVED, messageReceived);
+
+const messageSent = async (...args) => {
 	log("MESSAGE_SENT", args);
 	onNewMessage(...args);
 	return;
-});
+};
+
+eventSource.on(event_types.MESSAGE_SENT, messageSent);
+eventSource.makeLast(event_types.MESSAGE_SENT, messageSent);
 
 SlashCommandParser.addCommandObject(
 	SlashCommand.fromProps({
