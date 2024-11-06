@@ -49,9 +49,15 @@ const getCurrentParticipants = async () => {
 	var active = [...group.members];
 	
 	debug("includeMuted", extensionSettings.includeMuted);
+	debug("active", active);
+	debug("chat_metadata.ignore_presence", chat_metadata.ignore_presence);
 
 	if (!extensionSettings.includeMuted)
-		active = active.filter((m) => !group.disabled_members.includes(m));
+		active = active.filter(char => !group.disabled_members.includes(char));
+
+	chat_metadata.ignore_presence.forEach(char => {
+		if (active.includes(char)) active.splice(active.indexOf(char), 1);
+	});
 
 	return { members: group.members, present: active };
 };
