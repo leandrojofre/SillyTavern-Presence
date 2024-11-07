@@ -1,10 +1,10 @@
-import { chat, chat_metadata, getCurrentChatId, characters, saveChatDebounced, eventSource, event_types, saveSettingsDebounced } from "../../../../script.js";
-import { groups, selected_group, is_group_generating } from "../../../../scripts/group-chats.js";
+import { characters, chat, chat_metadata, eventSource, event_types, getCurrentChatId, saveChatDebounced, saveSettingsDebounced } from "../../../../script.js";
+import { groups, is_group_generating, selected_group } from "../../../../scripts/group-chats.js";
 import { hideChatMessageRange } from "../../../chats.js";
 import { extension_settings } from "../../../extensions.js";
-import { commonEnumProviders } from "../../../slash-commands/SlashCommandCommonEnumsProvider.js";
 import { SlashCommand } from "../../../slash-commands/SlashCommand.js";
 import { ARGUMENT_TYPE, SlashCommandArgument } from "../../../slash-commands/SlashCommandArgument.js";
+import { commonEnumProviders } from "../../../slash-commands/SlashCommandCommonEnumsProvider.js";
 import { SlashCommandParser } from "../../../slash-commands/SlashCommandParser.js";
 
 const extensionName = "Presence";
@@ -16,6 +16,7 @@ const defaultSettings = {
 	location: "top",
 	debugMode: false,
 	seeLast: true,
+	includeMuted: false,
 };
 let extensionSettings = extension_settings[extensionName];
 
@@ -45,7 +46,19 @@ const getMessage = async (mesId) => {
 
 const getCurrentParticipants = async () => {
 	const group = groups.find((g) => g.id == selected_group);
-	var active = group.members.filter((m) => !group.disabled_members.includes(m));
+	var active = [...group.members];
+	
+	debug("includeMuted", extensionSettings.includeMuted);
+	debug("active", active);
+	debug("chat_metadata.ignore_presence", chat_metadata.ignore_presence);
+
+	if (!extensionSettings.includeMuted)
+		active = active.filter(char => !group.disabled_members.includes(char));
+
+	chat_metadata.ignore_presence.forEach(char => {
+		if (active.includes(char)) active.splice(active.indexOf(char), 1);
+	});
+
 	return { members: group.members, present: active };
 };
 
@@ -55,23 +68,30 @@ const isActive = () => {
 
 const onNewMessage = async (mesId) => {
 	if (!isActive()) return;
+
 	const mes = await getMessage(mesId);
+
 	mes.present = (await getCurrentParticipants()).present;
+
 	debug("seeLast", extensionSettings.seeLast);
 	debug("is_user", mes.is_user);
 	debug("original_avatar", mes.original_avatar);
+
 	if(extensionSettings.seeLast && !mes.is_user) {
 		const prevMes = await getMessage(mesId - 1);
+
 		debug(prevMes);
-		if(!prevMes.present){
-			prevMes.present = [];
-		}
+
+		if(!prevMes.present) prevMes.present = [];
+
 		if(!prevMes.present.includes(mes.original_avatar)){
 			prevMes.present.push(mes.original_avatar);
 			debug(prevMes.present);
 		}
 	}
+
 	await saveChatDebounced();
+
 	debug("Present members added to last message");
 };
 
@@ -162,7 +182,7 @@ const onGenerationAfterCommands = async (type, config, dryRun) => {
 	async function draftHandler(...args) {
 		debug("GROUP_MEMBER_DRAFTED", args);
 		eventSource.removeListener(event_types.GENERATION_STOPPED, stopHandler);
-		onGroupMemeberDrafted(type, args[0]);
+		onGroupMemberDrafted(type, args[0]);
 		return;
 	}
 
@@ -171,7 +191,11 @@ const onGenerationAfterCommands = async (type, config, dryRun) => {
 	}
 };
 
-const onGroupMemeberDrafted = async (type, charId) => {
+const toggleVisibilityAllMessages = async (state = true) => {
+	hideChatMessageRange(0, chat.length - 1, state);
+}
+
+const onGroupMemberDrafted = async (type, charId) => {
 	if (!isActive()) return;
 
 	const char = characters[charId].avatar;
@@ -179,11 +203,11 @@ const onGroupMemeberDrafted = async (type, charId) => {
 	if (type == "impersonate" || chat_metadata.ignore_presence?.includes(char)) {
 		debug("Impersonation detected");
 		//reveal all history for impersonation
-		hideChatMessageRange(0, chat.length - 1, true);
+        	toggleVisibilityAllMessages(true);
 	} else {
 		//handle NPC draft
 		//hide all messages
-		hideChatMessageRange(0, chat.length - 1, false);
+		toggleVisibilityAllMessages(false);
 
 		const messages = chat.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => m.present.includes(char));
 
@@ -342,16 +366,34 @@ eventSource.on(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
 	onGenerationAfterCommands(...args);
 	return;
 });
-eventSource.on(event_types.MESSAGE_RECEIVED, async (...args) => {
+
+const messageReceived = async (...args) => {
 	log("MESSAGE_RECEIVED", args);
 	onNewMessage(...args);
+	toggleVisibilityAllMessages(true);
 	return;
-});
-eventSource.on(event_types.MESSAGE_SENT, async (...args) => {
+};
+
+eventSource.on(event_types.MESSAGE_RECEIVED, messageReceived);
+eventSource.makeFirst(event_types.MESSAGE_RECEIVED, messageReceived);
+
+const messageSent = async (...args) => {
 	log("MESSAGE_SENT", args);
 	onNewMessage(...args);
 	return;
-});
+};
+
+eventSource.on(event_types.MESSAGE_SENT, messageSent);
+eventSource.makeLast(event_types.MESSAGE_SENT, messageSent);
+
+const generationStopped = async (...args) => {
+	log("GENERATION_STOPPED", args);
+	toggleVisibilityAllMessages(true);
+	return;
+};
+
+eventSource.on(event_types.GENERATION_STOPPED, generationStopped);
+eventSource.makeFirst(event_types.GENERATION_STOPPED, generationStopped);
 
 SlashCommandParser.addCommandObject(
 	SlashCommand.fromProps({
@@ -450,6 +492,7 @@ jQuery(async () => {
 	settingsHtml.find("#presence_enable").prop("checked", extensionSettings.enabled);
 	settingsHtml.find("#presence_location").val(extensionSettings.location);
 	settingsHtml.find("#presence_seeLast").prop("checked", extensionSettings.seeLast);
+	settingsHtml.find("#presence_includeMuted").prop("checked", extensionSettings.includeMuted);
 	settingsHtml.find("#presence_debug").prop("checked", extensionSettings.debugMode);
 
 	settingsHtml.find("#presence_enable").on("change", (e) => {
@@ -465,6 +508,11 @@ jQuery(async () => {
 
 	settingsHtml.find("#presence_seeLast").on("change", (e) => {
 		extensionSettings.seeLast = $(e.target).prop("checked");
+		saveSettingsDebounced();
+	});
+
+	settingsHtml.find("#presence_includeMuted").on("change", (e) => {
+		extensionSettings.includeMuted = $(e.target).prop("checked");
 		saveSettingsDebounced();
 	});
 
