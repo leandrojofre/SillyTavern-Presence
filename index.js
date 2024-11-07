@@ -241,6 +241,23 @@ const commandRememberAll = async (namedArgs, charName) => {
 	addPresenceTrackerToMessages(true);
 };
 
+const commandForceAllPresent = async (namedArgs) => {
+	const members = (await getCurrentParticipants()).members;
+	for(let message of chat){
+		message.present = members;
+	}
+	saveChatDebounced();
+	addPresenceTrackerToMessages(true);
+};
+
+const commandForceNonePresent = async (namedArgs) => {
+	for(let message of chat){
+		message.present = [];
+	}
+	saveChatDebounced();
+	addPresenceTrackerToMessages(true);
+};
+
 const togglePresenceTracking = async (e) => {
 	const target = $(e.target).closest(".group_member");
 	const charId = target.attr("chid");
@@ -381,6 +398,28 @@ SlashCommandParser.addCommandObject(
 			}),
 		],
 		helpString: "Adds all messages to the memory of a character. Usage /presenceRememberAll <name>",
+	})
+);
+
+SlashCommandParser.addCommandObject(
+	SlashCommand.fromProps({
+		name: "presenceForceAllPresent",
+		callback: async (args, value) => {
+			await commandForceAllPresent(args);
+			return "";
+		},
+		helpString: "Makes all characters remember EVERYTHING. Usage /presenceForceAllPresent <name>",
+	})
+);
+
+SlashCommandParser.addCommandObject(
+	SlashCommand.fromProps({
+		name: "presenceForceNonePresent",
+		callback: async (args, value) => {
+			await commandForceNonePresent(args);
+			return "";
+		},
+		helpString: "Makes all characters remember EVERYTHING. Usage /presenceForceNonePresent <name>",
 	})
 );
 
