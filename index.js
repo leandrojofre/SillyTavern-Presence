@@ -11,13 +11,13 @@ const extensionName = "Presence";
 
 const extensionNameLong = `SillyTavern-${extensionName}`;
 const extensionFolderPath = `scripts/extensions/third-party/${extensionNameLong}`;
-const extensionSettings = extension_settings[extensionName];
 const defaultSettings = {
 	enabled: true,
 	location: "top",
 	debugMode: false,
 	seeLast: true,
 };
+let extensionSettings = extension_settings[extensionName];
 
 
 const log = (...msg) => console.log("[" + extensionName + "]", ...msg);
@@ -30,10 +30,11 @@ const debug = (...msg) => {
 
 const initSettings = async () => {
 	if (!extensionSettings || extensionSettings == {}) {
-		extensionSettings[extensionName] = defaultSettings;
+        extension_settings[extensionName] = defaultSettings;
+        extensionSettings = defaultSettings;
 		saveSettingsDebounced();
 	} else if (extensionSettings.enabled == undefined) {
-		extensionSettings[extensionName] = { ...defaultSettings, ...extensionSettings };
+        extension_settings[extensionName] = { ...defaultSettings, ...extensionSettings };
 		saveSettingsDebounced();
 	}
 };
