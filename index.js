@@ -569,8 +569,8 @@ jQuery(async () => {
 	$("#extensions_settings").append(settingsHtml);
 
     const universalTrackerAlwaysOn = `
-        <label title='Set the universal tracker to active for new messages' style='align-self: center; margin-left: auto;'>
-            <input id='presence_universal_tracer_on' type='checkbox' style='margin: 0;'/>
+        <label class="menu_button" title='Set the universal tracker to active for new messages' style='display: flex; align-items: center; align-self: center; margin: auto; gap: 5px;'>
+            Universal Tracker <input id='presence_universal_tracer_on' type='checkbox' style='margin: 0; transform: none;'/>
         </label>
     `;
 
