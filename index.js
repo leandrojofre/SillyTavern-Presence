@@ -209,8 +209,14 @@ const onGroupMemberDrafted = async (type, charId) => {
 	if (!isActive()) return;
 
 	const char = characters[charId].avatar;
+	const lastMessage = await getMessage(chat.length - 1);
+	const isUserContinue = (type == "continue" && lastMessage.is_user);
 
-	if (type == "impersonate" || chat_metadata.ignore_presence?.includes(char)) {
+	if (
+		type == "impersonate" ||
+		isUserContinue ||
+		chat_metadata.ignore_presence?.includes(char)
+	) {
 		debug("Impersonation detected");
 		//reveal all history for impersonation
         	toggleVisibilityAllMessages(true);
@@ -227,8 +233,8 @@ const onGroupMemberDrafted = async (type, charId) => {
 			hideChatMessageRange(message.id, message.id, true);
 		}
 
-		const lastMessage = chat.length - 1;
-		hideChatMessageRange(lastMessage, lastMessage, true);
+		const lastMessageID = chat.length - 1;
+		hideChatMessageRange(lastMessageID, lastMessageID, true);
 
 		debug("done");
 	}
