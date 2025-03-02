@@ -70,6 +70,23 @@
 	margin-right: var(--gap-size) !important;
 }
 
+#chat .mes_block .mes_presence_tracker .presence_icon.present.universal {
+    font-size: var(--icon-size-minified);
+    
+    .fa-solid::before {
+        vertical-align: super;
+    }
+}
+
+#chat .mes_block .mes_presence_tracker:hover .presence_icon.universal {
+	font-size: var(--icon-size) !important;
+    display: flex !important;
+
+    .fa-solid::before {
+        vertical-align: top;
+    }
+}
+
 #chat .mes_block .mes_presence_tracker:hover .presence_icon.present {
 	opacity: 100%;
 	margin-right: var(--gap-size) !important;

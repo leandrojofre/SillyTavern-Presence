@@ -18,6 +18,7 @@ const defaultSettings = {
 	debugMode: false,
 	seeLast: true,
 	includeMuted: false,
+    universalTrackerOn: false
 };
 const extensionSettings = extension_settings[extensionName];
 
@@ -54,8 +55,11 @@ const getMessage = async (mesId) => {
 
 const getCurrentParticipants = async () => {
 	const group = groups.find((g) => g.id == selected_group);
+
 	var active = [...group.members];
-	
+
+    if (extensionSettings.universalTrackerOn) active.push('presence_universal_tracker');
+
 	debug("includeMuted", extensionSettings.includeMuted);
 	debug("active", active);
 	debug("chat_metadata.ignore_presence", chat_metadata.ignore_presence);
@@ -81,16 +85,17 @@ const onNewMessage = async (mesId) => {
 
 	const mes = await getMessage(mesId);
 
-	mes.present = (await getCurrentParticipants()).present;
+	mes.present = [...(await getCurrentParticipants()).present];
 
 	debug("seeLast", extensionSettings.seeLast);
 	debug("is_user", mes.is_user);
 	debug("original_avatar", mes.original_avatar);
+	debug("present", mes.present);
 
 	if(extensionSettings.seeLast && !mes.is_user) {
 		const prevMes = await getMessage(mesId - 1);
 
-		debug(prevMes);
+		debug("prevMes", prevMes);
 
 		if(!prevMes.present) prevMes.present = [];
 
@@ -118,39 +123,62 @@ const addPresenceTrackerToMessages = async (refresh) => {
 		$("#chat .mes_presence_tracker").remove();
 	}
 
-	$(selector).each(async (index, element) => {
-		const mesId = $(element).attr("mesid");
-		const mes = await getMessage(mesId);
-		const mesPresence = mes.present ?? [];
-		const members = (await getCurrentParticipants()).members;
+	$(selector).each(async function (index, element) {
+        const mesId = $(element).attr("mesid");
+        const mes = await getMessage(mesId);
+        const mesPresence = mes.present ?? [];
+        const members = (await getCurrentParticipants()).members;
 
-		const trackerMembers = members.concat(mesPresence.filter((m) => !members.includes(m))).sort();
+        const trackerMembers = members.concat(mesPresence.filter((m) => !members.includes(m))).sort();
 
-		const presenceTracker = $('<div class="mes_presence_tracker"></div>');
+        const presenceTracker = $('<div class="mes_presence_tracker"></div>');
 
-		trackerMembers.forEach((member) => {
-			const isPresent = mesPresence.includes(member);
-			const memberIcon = $('<div class="presence_icon' + (isPresent ? " present" : "") + '"><img src="/thumbnail?type=avatar&amp;file=' + member + '"></div>');
+        if (!presenceTracker.first().hasClass('universal')) {
+            const universalTracker = $('<div class="presence_icon universal"><div class="fa-solid fa-universal-access interactable" title="Universal Tracker"></div></div>');
 
-			memberIcon.on("click", (e) => {
-				const target = $(e.target).closest(".presence_icon");
-				if (target.hasClass("present")) {
-					target.removeClass("present");
-					updateMessagePresence(mesId, member, false);
-				} else {
-					target.addClass("present");
-					updateMessagePresence(mesId, member, true);
-				}
-			});
+            universalTracker.on("click", (e) => {
+                const target = $(e.target).closest(".presence_icon");
+                if (target.hasClass("present")) {
+                    target.removeClass("present");
+                    updateMessagePresence(mesId, "presence_universal_tracker", false);
+                } else {
+                    target.addClass("present");
+                    updateMessagePresence(mesId, "presence_universal_tracker", true);
+                }
+            });
 
-			presenceTracker.append(memberIcon);
-		});
+            presenceTracker.prepend(universalTracker);
+        }
 
-		if (element.hasAttribute("has_presence_tracker")) return;
-		if (extensionSettings.location == "top") $(".mes_block > .ch_name > .flex1", element).append(presenceTracker);
-		else if (extensionSettings.location == "bottom") $(".mes_block", element).append(presenceTracker);
-		element.setAttribute("has_presence_tracker", true);
-	});
+        trackerMembers.forEach((member) => {
+            const isPresent = mesPresence.includes(member);
+
+            if (member === "presence_universal_tracker") {
+                if (isPresent) presenceTracker.find('.universal').addClass("present");
+                return;
+            }
+
+            const memberIcon = $('<div class="presence_icon' + (isPresent ? " present" : "") + '"><img src="/thumbnail?type=avatar&amp;file=' + member + '"></div>');
+
+            memberIcon.on("click", (e) => {
+                const target = $(e.target).closest(".presence_icon");
+                if (target.hasClass("present")) {
+                    target.removeClass("present");
+                    updateMessagePresence(mesId, member, false);
+                } else {
+                    target.addClass("present");
+                    updateMessagePresence(mesId, member, true);
+                }
+            });
+
+            presenceTracker.append(memberIcon);
+        });
+
+        if (element.hasAttribute("has_presence_tracker")) return;
+        if (extensionSettings.location == "top") $(".mes_block > .ch_name > .flex1", element).append(presenceTracker);
+        else if (extensionSettings.location == "bottom") $(".mes_block", element).append(presenceTracker);
+        element.setAttribute("has_presence_tracker", true);
+    });
 };
 
 const updateMessagePresence = async (mesId, member, isPresent) => {
@@ -159,6 +187,7 @@ const updateMessagePresence = async (mesId, member, isPresent) => {
 
 	if (isPresent) {
 		mes.present.push(member);
+        mes.present = [...new Set(mes.present)];
 	} else {
 		mes.present = mes.present.filter((m) => m != member);
 	}
@@ -219,13 +248,13 @@ const onGroupMemberDrafted = async (type, charId) => {
 	) {
 		debug("Impersonation detected");
 		//reveal all history for impersonation
-        	toggleVisibilityAllMessages(true);
+        toggleVisibilityAllMessages(true);
 	} else {
 		//handle NPC draft
 		//hide all messages
 		toggleVisibilityAllMessages(false);
 
-		const messages = chat.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => m.present.includes(char));
+		const messages = chat.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => m.present.includes(char) || m.present.includes("presence_universal_tracker"));
 
 		//unhide messages they've seen
 		for (const message of messages) {
@@ -538,4 +567,18 @@ jQuery(async () => {
 	});
 
 	$("#extensions_settings").append(settingsHtml);
+
+    const universalTrackerAlwaysOn = `
+        <label title='Set the universal tracker to active for new messages' style='align-self: center; margin-left: auto;'>
+            <input id='presence_universal_tracer_on' type='checkbox' style='margin: 0;'/>
+        </label>
+    `;
+
+    $('#rm_group_members_pagination').append(universalTrackerAlwaysOn);
+	$('#presence_universal_tracer_on').prop("checked", extensionSettings.universalTrackerOn);
+    $('#presence_universal_tracer_on').on("change", (e) => {
+        debug("universalTrackerOn", $(e.target).prop("checked"));
+		extensionSettings.universalTrackerOn = $(e.target).prop("checked");
+		saveSettingsDebounced();
+	});
 });
