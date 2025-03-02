@@ -26,7 +26,7 @@ const log = (...msg) => console.log("[" + extensionName + "]", ...msg);
 const warn = (...msg) => console.warn("[" + extensionName + " Warning]", ...msg);
 const debug = (...msg) => {
 	if (extensionSettings.debugMode) {
-		console.log("[" + extensionName + " debug]", ...msg);
+		console.debug("[" + extensionName + " debug]", ...msg);
 	}
 };
 
