@@ -11,6 +11,7 @@ const extensionName = "Presence";
 
 const extensionNameLong = `SillyTavern-${extensionName}`;
 const extensionFolderPath = `scripts/extensions/third-party/${extensionNameLong}`;
+const context = SillyTavern.getContext();
 const defaultSettings = {
 	enabled: true,
 	location: "top",
@@ -18,7 +19,7 @@ const defaultSettings = {
 	seeLast: true,
 	includeMuted: false,
 };
-let extensionSettings = extension_settings[extensionName];
+const extensionSettings = extension_settings[extensionName];
 
 
 const log = (...msg) => console.log("[" + extensionName + "]", ...msg);
@@ -29,15 +30,22 @@ const debug = (...msg) => {
 	}
 };
 
-const initSettings = async () => {
-	if (!extensionSettings || extensionSettings == {}) {
-        extension_settings[extensionName] = defaultSettings;
-        extensionSettings = defaultSettings;
-		saveSettingsDebounced();
-	} else if (extensionSettings.enabled == undefined) {
-        extension_settings[extensionName] = { ...defaultSettings, ...extensionSettings };
-		saveSettingsDebounced();
+
+// * Initialize Extension
+
+function initSettings() {
+
+	if (!context.extensionSettings[extensionName]) {
+	    context.extensionSettings[extensionName] = structuredClone(defaultSettings);
 	}
+
+	for (const key of Object.keys(defaultSettings)) {
+	    if (context.extensionSettings[extensionName][key] === undefined) {
+		   context.extensionSettings[extensionName][key] = defaultSettings[key];
+	    }
+	}
+
+    debug(extensionSettings);
 };
 
 const getMessage = async (mesId) => {
