@@ -300,7 +300,7 @@ const commandForceNonePresent = async (namedArgs) => {
 
 const togglePresenceTracking = async (e) => {
 	const target = $(e.target).closest(".group_member");
-	const charId = target.attr("chid");
+	const charId = target.data("chid");
 	const charAvatar = characters[charId].avatar;
 
 	const ignorePresence = chat_metadata.ignore_presence ?? [];
@@ -318,7 +318,7 @@ const togglePresenceTracking = async (e) => {
 
 const updatePresenceTrackingButton = async (member) => {
 	const target = member.find(".ignore_presence_toggle");
-	const charId = member.attr("chid");
+	const charId = member.data("chid");
 
 	if (!chat_metadata?.ignore_presence?.includes(characters[charId].avatar)) {
 		target.removeClass("active");
