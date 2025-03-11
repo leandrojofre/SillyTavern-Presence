@@ -123,7 +123,8 @@ const addPresenceTrackerToMessages = async (refresh) => {
 		$("#chat .mes_presence_tracker").remove();
 	}
 
-	$(selector).each(async function (index, element) {
+    const elements = $(selector).toArray();
+    for (const element of elements) {
         const mesId = $(element).attr("mesid");
         const mes = await getMessage(mesId);
         const mesPresence = mes.present ?? [];
@@ -177,8 +178,8 @@ const addPresenceTrackerToMessages = async (refresh) => {
         if (element.hasAttribute("has_presence_tracker")) return;
         if (extensionSettings.location == "top") $(".mes_block > .ch_name > .flex1", element).append(presenceTracker);
         else if (extensionSettings.location == "bottom") $(".mes_block", element).append(presenceTracker);
-        element.setAttribute("has_presence_tracker", true);
-    });
+        element.setAttribute("has_presence_tracker", "true");
+    };
 };
 
 const updateMessagePresence = async (mesId, member, isPresent) => {
@@ -448,7 +449,7 @@ SlashCommandParser.addCommandObject(
 				warn("WARN: No character name provided for /presenceForget command");
 				return;
 			}
-			value = value.trim();
+			value = String(value).trim();
 			await commandForget(args, value);
 			return "";
 		},
@@ -472,7 +473,7 @@ SlashCommandParser.addCommandObject(
 				warn("WARN: No character name provided for /presenceRememberAll command");
 				return;
 			}
-			value = value.trim();
+			value = String(value).trim();
 			await commandRememberAll(args, value);
 			return "";
 		},
@@ -536,7 +537,9 @@ jQuery(async () => {
 
 	settingsHtml.find("#presence_enable").prop("checked", extensionSettings.enabled);
 	settingsHtml.find("#presence_location").val(extensionSettings.location);
-	settingsHtml.find("#presence_seeLast").prop("checked", extensionSettings.seeLast);
+	settingsHtml.find("#presence_seeLast").on("input", function(e) {
+        extensionSettings.seeLast = Boolean($(e.target).prop("checked"));
+    });
 	settingsHtml.find("#presence_includeMuted").prop("checked", extensionSettings.includeMuted);
 	settingsHtml.find("#presence_debug").prop("checked", extensionSettings.debugMode);
 
