@@ -263,8 +263,10 @@ const onGroupMemberDrafted = async (type, charId) => {
 			hideChatMessageRange(message.id, message.id, true);
 		}
 
-		const lastMessageID = chat.length - 1;
-		hideChatMessageRange(lastMessageID, lastMessageID, true);
+        if (extensionSettings.seeLast) {
+            const lastMessageID = chat.length - 1;
+            hideChatMessageRange(lastMessageID, lastMessageID, true);
+        }
 
 		debug("done");
 	}
