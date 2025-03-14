@@ -3,9 +3,10 @@ import {groups, is_group_generating, selected_group} from "../../../../scripts/g
 import {hideChatMessageRange} from "../../../chats.js";
 import {extension_settings} from "../../../extensions.js";
 import {SlashCommand} from "../../../slash-commands/SlashCommand.js";
-import {ARGUMENT_TYPE, SlashCommandArgument} from "../../../slash-commands/SlashCommandArgument.js";
+import {ARGUMENT_TYPE, SlashCommandArgument, SlashCommandNamedArgument} from "../../../slash-commands/SlashCommandArgument.js";
 import {commonEnumProviders} from "../../../slash-commands/SlashCommandCommonEnumsProvider.js";
 import {SlashCommandParser} from "../../../slash-commands/SlashCommandParser.js";
+import { stringToRange } from "../../../utils.js";
 
 const extensionName = "Presence";
 
@@ -294,7 +295,59 @@ const commandForget = async (namedArgs, charName) => {
 	log("Wiped the memory of", charName);
 
 	saveChatDebounced();
-	addPresenceTrackerToMessages(true);
+	await addPresenceTrackerToMessages(true);
+};
+
+const commandRemember = async (namedArgs, message_id) => {
+    if (!isActive()) return;
+
+    const charName = String(namedArgs.name).trim();
+    const messages_number = String(message_id).trim().includes("-") ? stringToRange(message_id, 0, chat.length - 1) : Number(message_id);
+
+    log("/presenceForgetAll name='" + charName + "' " + message_id);
+
+	if (charName.length == 0) return;
+	if (messages_number == null)
+        // @ts-ignore
+        return toastr.error("WARN: Id range provided for /presenceRemember is invalid");
+
+	const char = characters.find((character) => character.name == charName)?.avatar;
+
+    if (char === undefined)
+        // @ts-ignore
+        return toastr.error("WARN: Character name provided for /presenceRemember doesn't exist within the character list");
+
+	const chat_messages = chat;
+
+    if (typeof messages_number === "number") {
+        if (isNaN(messages_number))
+            // @ts-ignore
+            return toastr.error("WARN: message id provided for /presenceRemember is not a number");
+        if (chat_messages[messages_number] === undefined)
+            // @ts-ignore
+            return toastr.error("WARN: message id provided for /presenceRemember doesn't exist within the chat");
+
+        if (!chat_messages[messages_number].present)
+            chat_messages[messages_number].present = [];
+
+        chat_messages[messages_number].present.push(char);
+
+        log("Added message with id=" + messages_number + " to the memory of " + charName);
+        saveChatDebounced();
+        await addPresenceTrackerToMessages(true);
+        return;
+    }
+
+    for (let mes_id = messages_number.start; mes_id <= messages_number.end; mes_id++) {
+        debug(mes_id);
+        if (!chat_messages[mes_id].present) chat_messages[mes_id].present = [];
+        chat_messages[mes_id].present.push(char);
+    }
+
+	log("Added all messages in the range=" + messages_number.start + "-" + messages_number.end + " to the memory of " + charName);
+
+	saveChatDebounced();
+	await addPresenceTrackerToMessages(true);
 };
 
 const commandRememberAll = async (namedArgs, charName) => {
@@ -315,7 +368,7 @@ const commandRememberAll = async (namedArgs, charName) => {
 	log("Added all messages to the memory of ", charName);
 
 	saveChatDebounced();
-	addPresenceTrackerToMessages(true);
+	await addPresenceTrackerToMessages(true);
 };
 
 const commandForceAllPresent = async (namedArgs) => {
@@ -324,7 +377,7 @@ const commandForceAllPresent = async (namedArgs) => {
 		message.present = members;
 	}
 	saveChatDebounced();
-	addPresenceTrackerToMessages(true);
+	await addPresenceTrackerToMessages(true);
 };
 
 const commandForceNonePresent = async (namedArgs) => {
@@ -332,7 +385,7 @@ const commandForceNonePresent = async (namedArgs) => {
 		message.present = [];
 	}
 	saveChatDebounced();
-	addPresenceTrackerToMessages(true);
+	await addPresenceTrackerToMessages(true);
 };
 
 const togglePresenceTracking = async (e) => {
@@ -468,7 +521,41 @@ SlashCommandParser.addCommandObject(
 				enumProvider: commonEnumProviders.characters("all"),
 			}),
 		],
-		helpString: "Wipes the memory of a character. Usage /presenceForget <name>",
+		helpString: "Wipes the memory of a character. Usage /presenceForgetAll <name>",
+	})
+);
+
+SlashCommandParser.addCommandObject(
+	SlashCommand.fromProps({
+		name: "presenceRemember",
+		callback: async (args, value) => {
+			if (!value) {
+				warn("WARN: No message id or id range provided for /presenceRemember");
+				// @ts-ignore
+				toastr.error("WARN: No message id or id range provided for /presenceRemember");
+				return;
+			}
+			await commandRemember(args, value);
+			return "";
+		},
+        namedArgumentList: [
+            SlashCommandNamedArgument.fromProps({
+                name: 'name',
+                description: 'Character name - or unique character identifier (avatar key)',
+                typeList: [ARGUMENT_TYPE.STRING],
+                isRequired: true,
+                enumProvider: commonEnumProviders.characters('character'),
+            }),
+        ],
+		unnamedArgumentList: [
+            SlashCommandArgument.fromProps({
+                description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
+                typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
+                isRequired: true,
+                enumProvider: commonEnumProviders.messages(),
+            }),
+		],
+		helpString: "Adds some messages to the memory of a character. Usage /presenceRemember <name> <mes_index, mes_range>",
 	})
 );
 
