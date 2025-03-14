@@ -676,7 +676,7 @@ SlashCommandParser.addCommandObject(
 			await commandForceAllPresent(args);
 			return "";
 		},
-		helpString: "Makes all characters remember EVERYTHING. Usage /presenceForceAllPresent <name>",
+		helpString: "Makes all characters remember EVERYTHING. Usage /presenceForceAllPresent",
 	})
 );
 
@@ -687,7 +687,7 @@ SlashCommandParser.addCommandObject(
 			await commandForceNonePresent(args);
 			return "";
 		},
-		helpString: "Makes all characters remember EVERYTHING. Usage /presenceForceNonePresent <name>",
+		helpString: "Makes all characters remember EVERYTHING. Usage /presenceForceNonePresent",
 	})
 );
 
