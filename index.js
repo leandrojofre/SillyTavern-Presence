@@ -127,7 +127,12 @@ const addPresenceTrackerToMessages = async (refresh) => {
     for (const element of elements) {
         const mesId = $(element).attr("mesid");
         const mes = await getMessage(mesId);
-        const mesPresence = mes.present ?? [];
+
+        if (mes.present == undefined)
+            mes.present = [];
+        else mes.present = [...new Set(mes.present)];
+
+        const mesPresence = mes.present;
         const members = (await getCurrentParticipants()).members;
 
         const trackerMembers = members.concat(mesPresence.filter((m) => !members.includes(m))).sort();
