@@ -278,7 +278,59 @@ const onGroupMemberDrafted = async (type, charId) => {
 	}
 };
 
-const commandForget = async (namedArgs, charName) => {
+const commandForget = async (namedArgs, message_id) => {
+    if (!isActive()) return;
+
+    const charName = String(namedArgs.name).trim();
+    const messages_number = String(message_id).trim().includes("-") ? stringToRange(message_id, 0, chat.length - 1) : Number(message_id);
+
+    log("/presenceForgetAll name='" + charName + "' " + message_id);
+
+	if (charName.length == 0) return;
+	if (messages_number == null)
+        // @ts-ignore
+        return toastr.error("WARN: Id range provided for /presenceRemember is invalid");
+
+	const char = characters.find((character) => character.name == charName)?.avatar;
+
+    if (char === undefined)
+        // @ts-ignore
+        return toastr.error("WARN: Character name provided for /presenceRemember doesn't exist within the character list");
+
+	const chat_messages = chat;
+
+    if (typeof messages_number === "number") {
+        if (isNaN(messages_number))
+            // @ts-ignore
+            return toastr.error("WARN: message id provided for /presenceRemember is not a number");
+        if (chat_messages[messages_number] === undefined)
+            // @ts-ignore
+            return toastr.error("WARN: message id provided for /presenceRemember doesn't exist within the chat");
+
+        if (!chat_messages[messages_number].present)
+            chat_messages[messages_number].present = [];
+
+        chat_messages[messages_number].present = chat_messages[messages_number].present.filter((group_member) => group_member != char);
+
+        log("Removed message with id=" + messages_number + " from the memory of " + charName);
+        saveChatDebounced();
+        await addPresenceTrackerToMessages(true);
+        return;
+    }
+
+    for (let mes_id = messages_number.start; mes_id <= messages_number.end; mes_id++) {
+        debug(mes_id);
+        if (!chat_messages[mes_id].present) chat_messages[mes_id].present = [];
+        chat_messages[mes_id].present = chat_messages[mes_id].present.filter((group_member) => group_member != char);
+    }
+
+	log("Removed all messages in the range=" + messages_number.start + "-" + messages_number.end + " from the memory of " + charName);
+
+	saveChatDebounced();
+	await addPresenceTrackerToMessages(true);
+};
+
+const commandForgetAll = async (namedArgs, charName) => {
 	if (!isActive()) return;
 	if (charName.length == 0) return;
 
@@ -506,11 +558,45 @@ SlashCommandParser.addCommandObject(
 		name: "presenceForget",
 		callback: async (args, value) => {
 			if (!value) {
-				warn("WARN: No character name provided for /presenceForget command");
+				warn("WARN: No message id or id range provided for /presenceForget");
+				// @ts-ignore
+				toastr.error("WARN: No message id or id range provided for /presenceForget");
+				return;
+			}
+			await commandForget(args, value);
+			return "";
+		},
+        namedArgumentList: [
+            SlashCommandNamedArgument.fromProps({
+                name: 'name',
+                description: 'Character name - or unique character identifier (avatar key)',
+                typeList: [ARGUMENT_TYPE.STRING],
+                isRequired: true,
+                enumProvider: commonEnumProviders.characters('character'),
+            }),
+        ],
+		unnamedArgumentList: [
+            SlashCommandArgument.fromProps({
+                description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
+                typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
+                isRequired: true,
+                enumProvider: commonEnumProviders.messages(),
+            }),
+		],
+		helpString: "Removes some messages from the memory of a character. Usage /presenceForget <name> <mes_index, mes_range>",
+	})
+);
+
+SlashCommandParser.addCommandObject(
+	SlashCommand.fromProps({
+		name: "presenceForgetAll",
+		callback: async (args, value) => {
+			if (!value) {
+				warn("WARN: No character name provided for /presenceForgetAll command");
 				return;
 			}
 			value = String(value).trim();
-			await commandForget(args, value);
+			await commandForgetAll(args, value);
 			return "";
 		},
 		unnamedArgumentList: [
