@@ -125,6 +125,7 @@ const addPresenceTrackerToMessages = async (refresh) => {
 	}
 
     const elements = $(selector).toArray();
+
     for (const element of elements) {
         const mesId = $(element).attr("mesid");
         const mes = await getMessage(mesId);
@@ -135,9 +136,7 @@ const addPresenceTrackerToMessages = async (refresh) => {
 
         const mesPresence = mes.present;
         const members = (await getCurrentParticipants()).members;
-
         const trackerMembers = members.concat(mesPresence.filter((m) => !members.includes(m))).sort();
-
         const presenceTracker = $('<div class="mes_presence_tracker"></div>');
 
         if (!presenceTracker.first().hasClass('universal')) {
@@ -423,6 +422,37 @@ const commandRememberAll = async (namedArgs, charName) => {
 	await addPresenceTrackerToMessages(true);
 };
 
+const commandReplace = async (namedArgs) => {
+    if (!isActive()) return;
+
+    const characterName = String(namedArgs.name).trim();
+    const replaceName = String(namedArgs.replace).trim();
+
+    log("/presenceReplace name='" + characterName + "' replace='" + replaceName + "'");
+
+	if (characterName.length == 0 || replaceName.length === 0) return;
+
+	const chat_messages = chat;
+    const findCharacter = characters.find((character) => character.name == characterName)?.avatar;
+    const findReplace = characters.find((character) => character.name == replaceName)?.avatar;
+    const character = findCharacter ?? (characterName + ".png");
+    const replace = findReplace ?? (replaceName + ".png");
+
+    for (const mess of chat_messages) {
+        if (!mess.present) mess.present = [];
+
+        mess.present = mess.present.map((ch_name) => {
+            if (ch_name === character) return replace;
+            return ch_name;
+        });
+    }
+
+	log("Moved all messages in the memory of " + characterName + " into the memory of " + replaceName);
+
+	saveChatDebounced();
+	await addPresenceTrackerToMessages(true);
+};
+
 const commandForceAllPresent = async (namedArgs) => {
 	const members = (await getCurrentParticipants()).members;
 	for(let message of chat){
@@ -666,6 +696,33 @@ SlashCommandParser.addCommandObject(
 			}),
 		],
 		helpString: "Adds all messages to the memory of a character. Usage /presenceRememberAll <name>",
+	})
+);
+
+SlashCommandParser.addCommandObject(
+	SlashCommand.fromProps({
+		name: "presenceReplace",
+		callback: async (args) => {
+			await commandReplace(args);
+			return "";
+		},
+        namedArgumentList: [
+            SlashCommandNamedArgument.fromProps({
+                name: 'name',
+                description: 'Character name - or unique character identifier (avatar key) of the character to be replaced',
+                typeList: [ARGUMENT_TYPE.STRING],
+                isRequired: true,
+                enumProvider: commonEnumProviders.characters('character'),
+            }),
+            SlashCommandNamedArgument.fromProps({
+                name: 'replace',
+                description: 'Character name - or unique character identifier (avatar key) of the replacement',
+                typeList: [ARGUMENT_TYPE.STRING],
+                isRequired: true,
+                enumProvider: commonEnumProviders.characters('character'),
+            }),
+        ],
+		helpString: "Transfer the messages from the memory of a character to another. Usage /presenceReplace <name> <replace>",
 	})
 );
 
