@@ -453,19 +453,68 @@ const commandReplace = async (namedArgs) => {
 	await addPresenceTrackerToMessages(true);
 };
 
-const commandForceAllPresent = async (namedArgs) => {
+const commandForceAllPresent = async (namedArgs, message_id) => {
+    if (!isActive()) return;
+
 	const members = (await getCurrentParticipants()).members;
-	for(let message of chat){
-		message.present = members;
-	}
+
+    if (message_id === undefined) {
+        for(const message of chat) message.present = members;
+
+        saveChatDebounced();
+        await addPresenceTrackerToMessages(true);
+        return;
+    }
+
+    const messages_number = String(message_id).trim().includes("-") ? stringToRange(message_id, 0, chat.length - 1) : Number(message_id);
+
+    if (typeof messages_number === "number") {
+        if (chat[messages_number] === undefined)
+            // @ts-ignore
+            return toastr.error("WARN: message id provided for /presenceForceAllPresent doesn't exist within the chat");
+
+        chat[messages_number].present = members;
+
+        saveChatDebounced();
+        await addPresenceTrackerToMessages(true);
+        return;
+    }
+
+    for (let mes_id = messages_number.start; mes_id <= messages_number.end; mes_id++)
+        chat[mes_id].present = members;
+
 	saveChatDebounced();
 	await addPresenceTrackerToMessages(true);
 };
 
-const commandForceNonePresent = async (namedArgs) => {
-	for(let message of chat){
-		message.present = [];
-	}
+const commandForceNonePresent = async (namedArgs, message_id) => {
+    if (!isActive()) return;
+
+    if (message_id === undefined) {
+        for(const message of chat) message.present = [];
+
+        saveChatDebounced();
+        await addPresenceTrackerToMessages(true);
+        return;
+    }
+
+    const messages_number = String(message_id).trim().includes("-") ? stringToRange(message_id, 0, chat.length - 1) : Number(message_id);
+
+    if (typeof messages_number === "number") {
+        if (chat[messages_number] === undefined)
+            // @ts-ignore
+            return toastr.error("WARN: message id provided for /presenceForceNonePresent doesn't exist within the chat");
+
+        chat[messages_number].present = [];
+
+        saveChatDebounced();
+        await addPresenceTrackerToMessages(true);
+        return;
+    }
+
+    for (let mes_id = messages_number.start; mes_id <= messages_number.end; mes_id++)
+        chat[mes_id].present = [];
+
 	saveChatDebounced();
 	await addPresenceTrackerToMessages(true);
 };
@@ -730,10 +779,18 @@ SlashCommandParser.addCommandObject(
 	SlashCommand.fromProps({
 		name: "presenceForceAllPresent",
 		callback: async (args, value) => {
-			await commandForceAllPresent(args);
+			await commandForceAllPresent(args, value);
 			return "";
 		},
-		helpString: "Makes all characters remember EVERYTHING. Usage /presenceForceAllPresent",
+		unnamedArgumentList: [
+            SlashCommandArgument.fromProps({
+                description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
+                typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
+                isRequired: true,
+                enumProvider: commonEnumProviders.messages(),
+            }),
+        ],
+		helpString: "Makes all characters remember EVERYTHING. Usage /presenceForceAllPresent WARN: THIS IS PERMANENT",
 	})
 );
 
@@ -741,10 +798,18 @@ SlashCommandParser.addCommandObject(
 	SlashCommand.fromProps({
 		name: "presenceForceNonePresent",
 		callback: async (args, value) => {
-			await commandForceNonePresent(args);
+			await commandForceNonePresent(args, value);
 			return "";
 		},
-		helpString: "Makes all characters remember EVERYTHING. Usage /presenceForceNonePresent",
+		unnamedArgumentList: [
+            SlashCommandArgument.fromProps({
+                description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
+                typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
+                isRequired: true,
+                enumProvider: commonEnumProviders.messages(),
+            }),
+        ],
+		helpString: "Makes all characters forget EVERYTHING. Usage /presenceForceNonePresent WARN: THIS IS PERMANENT",
 	})
 );
 
