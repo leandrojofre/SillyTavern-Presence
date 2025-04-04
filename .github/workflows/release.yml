@@ -1,0 +1,79 @@
+
+name: Create Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      deployments: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" > gh_token
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine version bump
+        id: determine_version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -z "$(git tag)" ]; then
+            current_version="0.0.0"
+          else
+            current_version=$(git describe --tags $(git rev-list --tags --max-count=1))
+          fi
+
+          echo "current_version=$current_version" >> $GITHUB_OUTPUT
+          echo "Current version: $current_version"
+
+          if [[ "$(gh pr view ${{ github.event.pull_request.number }} --json labels -q ".labels[].name")" == *"major"* ]]; then
+            new_version=$(echo $current_version | awk -F. '{print $1+1 ".0.0"}')
+            echo "version=major" >> $GITHUB_OUTPUT
+          elif [[ "$(gh pr view ${{ github.event.pull_request.number }} --json labels -q ".labels[].name")" == *"minor"* ]]; then
+            new_version=$(echo $current_version | awk -F. '{print $1 "." $2+1 ".0"}')
+            echo "version=minor" >> $GITHUB_OUTPUT
+          else
+            new_version=$(echo $current_version | awk -F. '{print $1 "." $2 "." $3+1}')
+            echo "version=patch" >> $GITHUB_OUTPUT
+          fi
+
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+
+      - name: Get PR details
+        id: pr_details
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pr=$(gh pr view ${{ github.event.pull_request.number }} --json title,author)
+          echo "title=$(echo $pr | jq -r .title)" >> $GITHUB_OUTPUT
+          echo "user=$(echo $pr | jq -r .author.login)" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.determine_version.outputs.new_version }}
+          release_name: SillyTavern-Presence v${{ steps.determine_version.outputs.new_version }}
+          body: |
+           - **PR Title**: ${{ steps.pr_details.outputs.title }}
+           - **Created by**: @${{ steps.pr_details.outputs.user }}
+          draft: false
+          prerelease: false

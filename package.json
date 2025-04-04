@@ -1,0 +1,5 @@
+{
+	"scripts": {
+		"main": "standard-version --main-as"
+	}
+}
