@@ -47,3 +47,4 @@ Click this button and it lights up, that will indicate that this character can s
 
 ## TODO
 - Include Universal Tracker in the commands.
+- Add documentation to the code.
