@@ -458,7 +458,7 @@ const commandForceAllPresent = async (namedArgs, message_id) => {
 
 	const members = (await getCurrentParticipants()).members;
 
-    if (message_id === undefined) {
+    if (message_id === undefined || message_id === "") {
         for(const message of chat) message.present = members;
 
         saveChatDebounced();
@@ -490,7 +490,7 @@ const commandForceAllPresent = async (namedArgs, message_id) => {
 const commandForceNonePresent = async (namedArgs, message_id) => {
     if (!isActive()) return;
 
-    if (message_id === undefined) {
+    if (message_id === undefined || message_id === "") {
         for(const message of chat) message.present = [];
 
         saveChatDebounced();
@@ -786,7 +786,7 @@ SlashCommandParser.addCommandObject(
             SlashCommandArgument.fromProps({
                 description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
                 typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
-                isRequired: true,
+                isRequired: false,
                 enumProvider: commonEnumProviders.messages(),
             }),
         ],
@@ -805,7 +805,7 @@ SlashCommandParser.addCommandObject(
             SlashCommandArgument.fromProps({
                 description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
                 typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
-                isRequired: true,
+                isRequired: false,
                 enumProvider: commonEnumProviders.messages(),
             }),
         ],
