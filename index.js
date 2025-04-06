@@ -458,7 +458,7 @@ const commandForceAllPresent = async (namedArgs, message_id) => {
 
 	const members = (await getCurrentParticipants()).members;
 
-    if (message_id === undefined) {
+    if (message_id === undefined || message_id === "") {
         for(const message of chat) message.present = members;
 
         saveChatDebounced();
@@ -490,7 +490,7 @@ const commandForceAllPresent = async (namedArgs, message_id) => {
 const commandForceNonePresent = async (namedArgs, message_id) => {
     if (!isActive()) return;
 
-    if (message_id === undefined) {
+    if (message_id === undefined || message_id === "") {
         for(const message of chat) message.present = [];
 
         saveChatDebounced();
