@@ -786,7 +786,7 @@ SlashCommandParser.addCommandObject(
             SlashCommandArgument.fromProps({
                 description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
                 typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
-                isRequired: true,
+                isRequired: false,
                 enumProvider: commonEnumProviders.messages(),
             }),
         ],
@@ -805,7 +805,7 @@ SlashCommandParser.addCommandObject(
             SlashCommandArgument.fromProps({
                 description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
                 typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
-                isRequired: true,
+                isRequired: false,
                 enumProvider: commonEnumProviders.messages(),
             }),
         ],
