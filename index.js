@@ -662,7 +662,7 @@ SlashCommandParser.addCommandObject(
                 enumProvider: commonEnumProviders.messages(),
             }),
 		],
-		helpString: "Removes some messages from the memory of a character. Usage /presenceForget <name> <mes_index, mes_range>",
+		helpString: "Removes messages of specified index or range from the memory of a character. Example: /presenceForget name=John 0-9",
 	})
 );
 
@@ -686,7 +686,7 @@ SlashCommandParser.addCommandObject(
 				enumProvider: commonEnumProviders.characters("all"),
 			}),
 		],
-		helpString: "Wipes the memory of a character. Usage /presenceForgetAll <name>",
+		helpString: "Wipes the memory of a character. Example: /presenceForgetAll John",
 	})
 );
 
@@ -720,7 +720,7 @@ SlashCommandParser.addCommandObject(
                 enumProvider: commonEnumProviders.messages(),
             }),
 		],
-		helpString: "Adds some messages to the memory of a character. Usage /presenceRemember <name> <mes_index, mes_range>",
+		helpString: "Adds messages of specified index or range to the memory of a character. Usage /presenceRemember name=John 0-9",
 	})
 );
 
@@ -744,7 +744,7 @@ SlashCommandParser.addCommandObject(
 				enumProvider: commonEnumProviders.characters("all"),
 			}),
 		],
-		helpString: "Adds all messages to the memory of a character. Usage /presenceRememberAll <name>",
+		helpString: "Adds all messages to the memory of a character. Example: /presenceRememberAll John",
 	})
 );
 
@@ -771,7 +771,7 @@ SlashCommandParser.addCommandObject(
                 enumProvider: commonEnumProviders.characters('character'),
             }),
         ],
-		helpString: "Transfer the messages from the memory of a character to another. Usage /presenceReplace <name> <replace>",
+		helpString: "Transfers the messages from the memory of a character (forgets EVERYTHING) to another. Example: /presenceReplace name=Alice replace=Bob",
 	})
 );
 
@@ -790,7 +790,7 @@ SlashCommandParser.addCommandObject(
                 enumProvider: commonEnumProviders.messages(),
             }),
         ],
-		helpString: "Makes all characters remember EVERYTHING. Usage /presenceForceAllPresent WARN: THIS IS PERMANENT",
+		helpString: "Makes all characters remember EVERYTHING, IRREVERSIBLY, index or range optional. Example: /presenceForceAllPresent 0-9",
 	})
 );
 
@@ -809,7 +809,7 @@ SlashCommandParser.addCommandObject(
                 enumProvider: commonEnumProviders.messages(),
             }),
         ],
-		helpString: "Makes all characters forget EVERYTHING. Usage /presenceForceNonePresent WARN: THIS IS PERMANENT",
+		helpString: "Makes all characters forget EVERYTHING, IRREVERSIBLY, index or range optional. Example: /presenceForceNonePresent 0-9",
 	})
 );
 
