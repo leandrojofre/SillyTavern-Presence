@@ -720,7 +720,7 @@ SlashCommandParser.addCommandObject(
                 enumProvider: commonEnumProviders.messages(),
             }),
 		],
-		helpString: "Adds messages of specified index or range to the memory of a character. Usage /presenceRemember name=John 0-9",
+		helpString: "Adds messages of specified index or range to the memory of a character. Example: /presenceRemember name=John 0-9",
 	})
 );
 
