@@ -460,6 +460,39 @@ const commandReplace = async ({ name = "", replace = "" } = {}) => {
 	await addPresenceTrackerToMessages(true);
 };
 
+const commandCopy = async ({ source_index = "", target_index = "" } = {}) => {
+    if (!isActive()) return;
+
+    const sourceIndex = Number(source_index.trim());
+    const targetIndex = Number(target_index.trim());
+
+	// @ts-ignore
+	if (isNaN(sourceIndex)) return toastr.warning(t`source_index is not valid`);
+	// @ts-ignore
+	if (isNaN(targetIndex)) return toastr.warning(t`target_index is not valid`);
+    if (sourceIndex === targetIndex) return;
+
+    const sourceMess = chat[sourceIndex];
+    const targetMess = chat[targetIndex];
+
+	// @ts-ignore
+	if (!chat[sourceIndex]) return toastr.warning(t`Source mess=#${sourceIndex} was not found`);
+	// @ts-ignore
+	if (!chat[targetIndex]) return toastr.warning(t`Target mess=#${targetIndex} was not found`);
+
+    targetMess.present = [...new Set([
+        ...targetMess.present ?? [],
+        ...sourceMess.present ?? []
+    ])];
+
+    log("/presenceCopy source_index='" + sourceIndex + "' target_index='" + targetIndex + "'", {source_index: source_index, target_index: target_index});
+
+	log("Copied the tracker of mess=#" + sourceIndex + " into mess=#" + targetIndex);
+
+	saveChatDebounced();
+	await addPresenceTrackerToMessages(true);
+};
+
 const commandForceAllPresent = async (namedArgs, message_id) => {
     if (!isActive()) return;
 
@@ -780,6 +813,34 @@ SlashCommandParser.addCommandObject(
             }),
         ],
 		helpString: "Transfer the messages from the memory of a character to another. Usage /presenceReplace <name> <replace>",
+	})
+);
+
+SlashCommandParser.addCommandObject(
+	SlashCommand.fromProps({
+		name: "presenceCopy",
+		callback: async (args) => {
+			// @ts-ignore
+			await commandCopy(args);
+			return "";
+		},
+        namedArgumentList: [
+            SlashCommandNamedArgument.fromProps({
+                name: 'source_index',
+                description: 'ID of the massage with the Tracker you want to copy',
+                typeList: [ARGUMENT_TYPE.NUMBER],
+                isRequired: true,
+                enumProvider: commonEnumProviders.messages(),
+            }),
+            SlashCommandNamedArgument.fromProps({
+                name: 'target_index',
+                description: 'ID of the message where you will paste the copied Tracker',
+                typeList: [ARGUMENT_TYPE.NUMBER],
+                isRequired: true,
+                enumProvider: commonEnumProviders.messages(),
+            }),
+        ],
+		helpString: "Copy the Tracker of a message and paste it on another one. Usage /presenceCopy <source_index> <target_index>",
 	})
 );
 
