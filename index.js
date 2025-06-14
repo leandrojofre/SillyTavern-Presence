@@ -422,27 +422,34 @@ const commandRememberAll = async (namedArgs, charName) => {
 	await addPresenceTrackerToMessages(true);
 };
 
-const commandReplace = async (namedArgs) => {
+const commandReplace = async ({ name = "", replace = "" } = {}) => {
     if (!isActive()) return;
 
-    const characterName = String(namedArgs.name).trim();
-    const replaceName = String(namedArgs.replace).trim();
+    const characterName = String(name).trim();
+    const replaceName = String(replace).trim();
 
-    log("/presenceReplace name='" + characterName + "' replace='" + replaceName + "'");
+	// @ts-ignore
+	if (characterName.length === 0 || replaceName.length === 0) return toastr.warning(t`Character name or replace not valid`);
 
-	if (characterName.length == 0 || replaceName.length === 0) return;
+    const findCharacter = characters.find((character) => character.name, characterName)?.avatar;
+    const findReplace = characters.find((character) => character.name, replaceName)?.avatar;
+    const character = findCharacter;
+    const replacer = findReplace;
 
-	const chat_messages = chat;
-    const findCharacter = characters.find((character) => character.name == characterName)?.avatar;
-    const findReplace = characters.find((character) => character.name == replaceName)?.avatar;
-    const character = findCharacter ?? (characterName + ".png");
-    const replace = findReplace ?? (replaceName + ".png");
+    if (!character || !replacer) {
+        // @ts-ignore
+        toastr.error("Character or replacer not found - check the console for more details");
+        return log("Character or replacer not found - ", "name=" + character, "replace=" + replacer);
+    }
 
-    for (const mess of chat_messages) {
+    log("/presenceReplace name='" + findCharacter + "' replace='" + findReplace + "'", {name: name, replace: replace});
+
+    for (const mess of chat) {
         if (!mess.present) mess.present = [];
 
         mess.present = mess.present.map((ch_name) => {
-            if (ch_name === character) return replace;
+            const sanitize = (str) => str.replace(/(\.\w+)$/i, "");
+            if (sanitize(ch_name) === sanitize(character)) return replacer;
             return ch_name;
         });
     }
@@ -752,6 +759,7 @@ SlashCommandParser.addCommandObject(
 	SlashCommand.fromProps({
 		name: "presenceReplace",
 		callback: async (args) => {
+			// @ts-ignore
 			await commandReplace(args);
 			return "";
 		},
