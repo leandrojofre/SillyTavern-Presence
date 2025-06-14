@@ -874,13 +874,13 @@ jQuery(async () => {
 	$("#extensions_settings").append(settingsHtml);
 
     const universalTrackerAlwaysOn = `
-        <label class="menu_button" title='Set the universal tracker to active for new messages' style='display: flex; align-items: center; align-self: center; margin: auto; gap: 5px;'>
-            <div style="width: max-content;">Universal Tracker</div>
-            <input id='presence_universal_tracer_on' type='checkbox' style='margin: 0; transform: none;'/>
+        <label class="checkbox_label whitespacenowrap" title="Set the universal tracker to active for new messages" style="margin-top: 7px">
+            <input id="presence_universal_tracer_on" type="checkbox"/>
+            <span data-i18n="Universal Tracker">Universal Tracker</span>
         </label>
     `;
 
-    $('#rm_group_members_pagination').append(universalTrackerAlwaysOn);
+    $('#GroupFavDelOkBack .flex1').append(universalTrackerAlwaysOn);
 	$('#presence_universal_tracer_on').prop("checked", extensionSettings.universalTrackerOn);
     $('#presence_universal_tracer_on').on("change", (e) => {
         debug("universalTrackerOn", $(e.target).prop("checked"));
