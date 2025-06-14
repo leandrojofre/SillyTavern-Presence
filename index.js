@@ -422,32 +422,72 @@ const commandRememberAll = async (namedArgs, charName) => {
 	await addPresenceTrackerToMessages(true);
 };
 
-const commandReplace = async (namedArgs) => {
+const commandReplace = async ({ name = "", replace = "" } = {}) => {
     if (!isActive()) return;
 
-    const characterName = String(namedArgs.name).trim();
-    const replaceName = String(namedArgs.replace).trim();
+    const characterName = String(name).trim();
+    const replaceName = String(replace).trim();
 
-    log("/presenceReplace name='" + characterName + "' replace='" + replaceName + "'");
+	// @ts-ignore
+	if (characterName.length === 0 || replaceName.length === 0) return toastr.warning(t`Character name or replace not valid`);
 
-	if (characterName.length == 0 || replaceName.length === 0) return;
+    const findCharacter = characters.find((character) => character.name, characterName)?.avatar;
+    const findReplace = characters.find((character) => character.name, replaceName)?.avatar;
+    const character = findCharacter;
+    const replacer = findReplace;
 
-	const chat_messages = chat;
-    const findCharacter = characters.find((character) => character.name == characterName)?.avatar;
-    const findReplace = characters.find((character) => character.name == replaceName)?.avatar;
-    const character = findCharacter ?? (characterName + ".png");
-    const replace = findReplace ?? (replaceName + ".png");
+    if (!character || !replacer) {
+        // @ts-ignore
+        toastr.error("Character or replacer not found - check the console for more details");
+        return log("Character or replacer not found - ", "name=" + character, "replace=" + replacer);
+    }
 
-    for (const mess of chat_messages) {
+    log("/presenceReplace name='" + findCharacter + "' replace='" + findReplace + "'", {name: name, replace: replace});
+
+    for (const mess of chat) {
         if (!mess.present) mess.present = [];
 
         mess.present = mess.present.map((ch_name) => {
-            if (ch_name === character) return replace;
+            const sanitize = (str) => str.replace(/(\.\w+)$/i, "");
+            if (sanitize(ch_name) === sanitize(character)) return replacer;
             return ch_name;
         });
     }
 
 	log("Moved all messages in the memory of " + characterName + " into the memory of " + replaceName);
+
+	saveChatDebounced();
+	await addPresenceTrackerToMessages(true);
+};
+
+const commandCopy = async ({ source_index = "", target_index = "" } = {}) => {
+    if (!isActive()) return;
+
+    const sourceIndex = Number(source_index.trim());
+    const targetIndex = Number(target_index.trim());
+
+	// @ts-ignore
+	if (isNaN(sourceIndex)) return toastr.warning(t`source_index is not valid`);
+	// @ts-ignore
+	if (isNaN(targetIndex)) return toastr.warning(t`target_index is not valid`);
+    if (sourceIndex === targetIndex) return;
+
+    const sourceMess = chat[sourceIndex];
+    const targetMess = chat[targetIndex];
+
+	// @ts-ignore
+	if (!chat[sourceIndex]) return toastr.warning(t`Source mess=#${sourceIndex} was not found`);
+	// @ts-ignore
+	if (!chat[targetIndex]) return toastr.warning(t`Target mess=#${targetIndex} was not found`);
+
+    targetMess.present = [...new Set([
+        ...targetMess.present ?? [],
+        ...sourceMess.present ?? []
+    ])];
+
+    log("/presenceCopy source_index='" + sourceIndex + "' target_index='" + targetIndex + "'", {source_index: source_index, target_index: target_index});
+
+	log("Copied the tracker of mess=#" + sourceIndex + " into mess=#" + targetIndex);
 
 	saveChatDebounced();
 	await addPresenceTrackerToMessages(true);
@@ -752,6 +792,7 @@ SlashCommandParser.addCommandObject(
 	SlashCommand.fromProps({
 		name: "presenceReplace",
 		callback: async (args) => {
+			// @ts-ignore
 			await commandReplace(args);
 			return "";
 		},
@@ -772,6 +813,34 @@ SlashCommandParser.addCommandObject(
             }),
         ],
 		helpString: "Transfer the messages from the memory of a character to another. Usage /presenceReplace <name> <replace>",
+	})
+);
+
+SlashCommandParser.addCommandObject(
+	SlashCommand.fromProps({
+		name: "presenceCopy",
+		callback: async (args) => {
+			// @ts-ignore
+			await commandCopy(args);
+			return "";
+		},
+        namedArgumentList: [
+            SlashCommandNamedArgument.fromProps({
+                name: 'source_index',
+                description: 'ID of the massage with the Tracker you want to copy',
+                typeList: [ARGUMENT_TYPE.NUMBER],
+                isRequired: true,
+                enumProvider: commonEnumProviders.messages(),
+            }),
+            SlashCommandNamedArgument.fromProps({
+                name: 'target_index',
+                description: 'ID of the message where you will paste the copied Tracker',
+                typeList: [ARGUMENT_TYPE.NUMBER],
+                isRequired: true,
+                enumProvider: commonEnumProviders.messages(),
+            }),
+        ],
+		helpString: "Copy the Tracker of a message and paste it on another one. Usage /presenceCopy <source_index> <target_index>",
 	})
 );
 
@@ -874,13 +943,13 @@ jQuery(async () => {
 	$("#extensions_settings").append(settingsHtml);
 
     const universalTrackerAlwaysOn = `
-        <label class="menu_button" title='Set the universal tracker to active for new messages' style='display: flex; align-items: center; align-self: center; margin: auto; gap: 5px;'>
-            <div style="width: max-content;">Universal Tracker</div>
-            <input id='presence_universal_tracer_on' type='checkbox' style='margin: 0; transform: none;'/>
+        <label class="checkbox_label whitespacenowrap" title="Set the universal tracker to active for new messages" style="margin-top: 7px">
+            <input id="presence_universal_tracer_on" type="checkbox"/>
+            <span data-i18n="Universal Tracker">Universal Tracker</span>
         </label>
     `;
 
-    $('#rm_group_members_pagination').append(universalTrackerAlwaysOn);
+    $('#GroupFavDelOkBack .flex1').append(universalTrackerAlwaysOn);
 	$('#presence_universal_tracer_on').prop("checked", extensionSettings.universalTrackerOn);
     $('#presence_universal_tracer_on').on("change", (e) => {
         debug("universalTrackerOn", $(e.target).prop("checked"));
