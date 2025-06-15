@@ -1,7 +1,7 @@
 ## Installation
 Use ST's inbuilt extension installer with this URL:
 
-```https://github.com/lackyas/SillyTavern-Presence```
+`https://github.com/leandrojofre/SillyTavern-Presence`
 
 ## Usage
 Just start chatting! It really is that simple!
