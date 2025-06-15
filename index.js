@@ -704,7 +704,18 @@ SlashCommandParser.addCommandObject(
                 enumProvider: commonEnumProviders.messages(),
             }),
 		],
-		helpString: "Removes messages of specified index or range from the memory of a character. Example: /presenceForget name=John 0-9",
+		helpString: `
+        <div>
+            Removes messages of specified index or range from the memory of a character.
+        </div>
+        <div>
+            <strong>Example:</strong>
+            <ul>
+                <li>
+                    <pre><code>/presenceForget name=John 0-9</code></pre>
+                </li>
+            </ul>
+        </div>`,
 	})
 );
 
@@ -722,13 +733,24 @@ SlashCommandParser.addCommandObject(
 		},
 		unnamedArgumentList: [
 			SlashCommandArgument.fromProps({
-				description: "name",
+				description: "Character name - or unique character identifier (avatar key)",
 				typeList: [ARGUMENT_TYPE.STRING],
 				isRequired: true,
 				enumProvider: commonEnumProviders.characters("all"),
 			}),
 		],
-		helpString: "Wipes the memory of a character. Example: /presenceForgetAll John",
+		helpString: `
+        <div>
+            Wipes the memory of a character.
+        </div>
+        <div>
+            <strong>Example:</strong>
+            <ul>
+                <li>
+                    <pre><code>/presenceForgetAll John</code></pre>
+                </li>
+            </ul>
+        </div>`,
 	})
 );
 
@@ -762,7 +784,18 @@ SlashCommandParser.addCommandObject(
                 enumProvider: commonEnumProviders.messages(),
             }),
 		],
-		helpString: "Adds messages of specified index or range to the memory of a character. Example: /presenceRemember name=John 0-9",
+		helpString: `
+        <div>
+            Adds messages of specified index or range to the memory of a character.
+        </div>
+        <div>
+            <strong>Example:</strong>
+            <ul>
+                <li>
+                    <pre><code>/presenceRemember name=John 0-9</code></pre>
+                </li>
+            </ul>
+        </div>`,
 	})
 );
 
@@ -786,7 +819,18 @@ SlashCommandParser.addCommandObject(
 				enumProvider: commonEnumProviders.characters("all"),
 			}),
 		],
-		helpString: "Adds all messages to the memory of a character. Example: /presenceRememberAll John",
+		helpString: `
+        <div>
+            Adds all messages to the memory of a character.
+        </div>
+        <div>
+            <strong>Example:</strong>
+            <ul>
+                <li>
+                    <pre><code>/presenceRememberAll John</code></pre>
+                </li>
+            </ul>
+        </div>`,
 	})
 );
 
@@ -814,7 +858,18 @@ SlashCommandParser.addCommandObject(
                 enumProvider: commonEnumProviders.characters('character'),
             }),
         ],
-		helpString: "Transfers the messages from the memory of a character (forgets EVERYTHING) to another. Example: /presenceReplace name=Alice replace=Bob",
+		helpString: `
+        <div>
+            Transfers the messages from the memory of a character (forgets EVERYTHING) to another.
+        </div>
+        <div>
+            <strong>Example:</strong>
+            <ul>
+                <li>
+                    <pre><code>/presenceReplace name=Alice replace=Bob</code></pre>
+                </li>
+            </ul>
+        </div>`,
 	})
 );
 
@@ -842,7 +897,18 @@ SlashCommandParser.addCommandObject(
                 enumProvider: commonEnumProviders.messages(),
             }),
         ],
-		helpString: "Copy the Tracker of a message and paste it on another one. Usage /presenceCopy <source_index> <target_index>",
+		helpString: `
+        <div>
+            Copy the Tracker of a message and paste it on another one - message indexes.
+        </div>
+        <div>
+            <strong>Example:</strong>
+            <ul>
+                <li>
+                    <pre><code>/presenceCopy source_index=2 target_index=80</code></pre>
+                </li>
+            </ul>
+        </div>`,
 	})
 );
 
@@ -861,7 +927,18 @@ SlashCommandParser.addCommandObject(
                 enumProvider: commonEnumProviders.messages(),
             }),
         ],
-		helpString: "Makes all characters remember EVERYTHING, IRREVERSIBLY, index or range optional. Example: /presenceForceAllPresent 0-9",
+		helpString: `
+        <div>
+            Makes all characters remember EVERYTHING, IRREVERSIBLY, index or range optional.
+        </div>
+        <div>
+            <strong>Example:</strong>
+            <ul>
+                <li>
+                    <pre><code>/presenceForceAllPresent 0-9</code></pre>
+                </li>
+            </ul>
+        </div>`,
 	})
 );
 
@@ -880,7 +957,18 @@ SlashCommandParser.addCommandObject(
                 enumProvider: commonEnumProviders.messages(),
             }),
         ],
-		helpString: "Makes all characters forget EVERYTHING, IRREVERSIBLY, index or range optional. Example: /presenceForceNonePresent 0-9",
+		helpString: `
+        <div>
+            Makes all characters forget EVERYTHING, IRREVERSIBLY, index or range optional.
+        </div>
+        <div>
+            <strong>Example:</strong>
+            <ul>
+                <li>
+                    <pre><code>/presenceForceNonePresent 0-9</code></pre>
+                </li>
+            </ul>
+        </div>`,
 	})
 );
 
