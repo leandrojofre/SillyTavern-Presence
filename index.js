@@ -23,15 +23,17 @@ const defaultSettings = {
 };
 const extensionSettings = extension_settings[extensionName];
 
-
-const log = (...msg) => console.log("[" + extensionName + "]", ...msg);
-const warn = (...msg) => console.warn("[" + extensionName + " Warning]", ...msg);
-const debug = (...msg) => {
-	if (extensionSettings.debugMode) {
-		console.debug("[" + extensionName + " debug]", ...msg);
-	}
+const log = (...msg) => {
+    if (extensionSettings.debugMode) console.log("[" + extensionName + "]", ...msg)
 };
 
+const warn = (...msg) => {
+    if (extensionSettings.debugMode) console.warn("[" + extensionName + " Warning]", ...msg)
+};
+
+const debug = (...msg) => {
+	if (extensionSettings.debugMode) console.debug("[" + extensionName + " debug]", ...msg);
+};
 
 // * Initialize Extension
 
@@ -431,8 +433,8 @@ const commandReplace = async ({ name = "", replace = "" } = {}) => {
 	// @ts-ignore
 	if (characterName.length === 0 || replaceName.length === 0) return toastr.warning(t`Character name or replace not valid`);
 
-    const findCharacter = characters.find((character) => character.name, characterName)?.avatar;
-    const findReplace = characters.find((character) => character.name, replaceName)?.avatar;
+    const findCharacter = characters.find((character) => character.name === characterName)?.avatar;
+    const findReplace = characters.find((character) => character.name === replaceName)?.avatar;
     const character = findCharacter;
     const replacer = findReplace;
 
