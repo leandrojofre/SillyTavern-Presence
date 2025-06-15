@@ -1,7 +1,7 @@
 ## Installation
 Use ST's inbuilt extension installer with this URL:
 
-```https://github.com/lackyas/SillyTavern-Presence```
+`https://github.com/leandrojofre/SillyTavern-Presence`
 
 ## Usage
 Just start chatting! It really is that simple!
@@ -45,6 +45,8 @@ Click this button and it lights up, that will indicate that this character can s
 - `/presenceForceNonePresent <mes_index|mes_range>?` Makes **all** characters forget **everything**.
 - `/presenceForceAllPresent <mes_index|mes_range>?` Makes **all** characters remember **everything**.
 
+## Thanks to Contributors
+- **cloak1505** for the update to the commands descriptions.
+
 ## TODO
 - Include Universal Tracker in the commands.
-- Add documentation to the code.
