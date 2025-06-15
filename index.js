@@ -431,8 +431,8 @@ const commandReplace = async ({ name = "", replace = "" } = {}) => {
 	// @ts-ignore
 	if (characterName.length === 0 || replaceName.length === 0) return toastr.warning(t`Character name or replace not valid`);
 
-    const findCharacter = characters.find((character) => character.name, characterName)?.avatar;
-    const findReplace = characters.find((character) => character.name, replaceName)?.avatar;
+    const findCharacter = characters.find((character) => character.name === characterName)?.avatar;
+    const findReplace = characters.find((character) => character.name === replaceName)?.avatar;
     const character = findCharacter;
     const replacer = findReplace;
 
