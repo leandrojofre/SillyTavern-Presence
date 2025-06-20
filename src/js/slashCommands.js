@@ -551,7 +551,7 @@ export function registerSlashCommands() {
             ],
             helpString: `
             <div>
-                Copy the Tracker of a message and paste it on another one - message indexes.
+                Copy the Tracker of a message and paste it on another one - it uses message indexes. The original tracker is not replaced/deleted.
             </div>
             <div>
                 <strong>Example:</strong>
