@@ -1,12 +1,12 @@
-import { addPresenceTrackerToMessages, debug, getCurrentParticipants, isActive, log, warn } from "../..";
-import { characters, chat, saveChatDebounced } from "../../../../../../script";
-import { SlashCommand } from "../../../../../slash-commands/SlashCommand";
-import { ARGUMENT_TYPE, SlashCommandArgument, SlashCommandNamedArgument } from "../../../../../slash-commands/SlashCommandArgument";
-import { commonEnumProviders } from "../../../../../slash-commands/SlashCommandCommonEnumsProvider";
-import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser";
-import { stringToRange } from "../../../../../utils";
+import { addPresenceTrackerToMessages, debug, getCurrentParticipants, isActive, log, warn } from "../../index.js";
+import { characters, chat, saveChatDebounced } from "../../../../../../script.js";
+import { SlashCommand } from "../../../../../slash-commands/SlashCommand.js";
+import { ARGUMENT_TYPE, SlashCommandArgument, SlashCommandNamedArgument } from "../../../../../slash-commands/SlashCommandArgument.js";
+import { commonEnumProviders } from "../../../../../slash-commands/SlashCommandCommonEnumsProvider.js";
+import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
+import { stringToRange } from "../../../../../utils.js";
 
-const commandForget = async (namedArgs, message_id) => {
+async function commandForget(namedArgs, message_id) {
     if (!isActive()) return;
 
     const charName = String(namedArgs.name).trim();
@@ -58,7 +58,7 @@ const commandForget = async (namedArgs, message_id) => {
     await addPresenceTrackerToMessages(true);
 };
 
-const commandForgetAll = async (namedArgs, charName) => {
+async function commandForgetAll(namedArgs, charName) {
     if (!isActive()) return;
     if (charName.length == 0) return;
 
@@ -78,7 +78,7 @@ const commandForgetAll = async (namedArgs, charName) => {
     await addPresenceTrackerToMessages(true);
 };
 
-const commandRemember = async (namedArgs, message_id) => {
+async function commandRemember(namedArgs, message_id) {
     if (!isActive()) return;
 
     const charName = String(namedArgs.name).trim();
@@ -130,7 +130,7 @@ const commandRemember = async (namedArgs, message_id) => {
     await addPresenceTrackerToMessages(true);
 };
 
-const commandRememberAll = async (namedArgs, charName) => {
+async function commandRememberAll(namedArgs, charName) {
     if (!isActive()) return;
     if (charName.length == 0) return;
 
@@ -151,7 +151,7 @@ const commandRememberAll = async (namedArgs, charName) => {
     await addPresenceTrackerToMessages(true);
 };
 
-const commandReplace = async ({ name = "", replace = "" } = {}) => {
+async function commandReplace({ name = "", replace = "" } = {}) {
     if (!isActive()) return;
 
     const characterName = String(name).trim();
@@ -187,7 +187,7 @@ const commandReplace = async ({ name = "", replace = "" } = {}) => {
     await addPresenceTrackerToMessages(true);
 };
 
-const commandCopy = async ({ source_index = "", target_index = "" } = {}) => {
+async function commandCopy({ source_index = "", target_index = "" } = {}) {
     if (!isActive()) return;
 
     const sourceIndex = Number(source_index.trim());
@@ -220,7 +220,7 @@ const commandCopy = async ({ source_index = "", target_index = "" } = {}) => {
     await addPresenceTrackerToMessages(true);
 };
 
-const commandForceAllPresent = async (namedArgs, message_id) => {
+async function commandForceAllPresent(namedArgs, message_id) {
     if (!isActive()) return;
 
     const members = (await getCurrentParticipants()).members;
@@ -254,7 +254,7 @@ const commandForceAllPresent = async (namedArgs, message_id) => {
     await addPresenceTrackerToMessages(true);
 };
 
-const commandForceNonePresent = async (namedArgs, message_id) => {
+async function commandForceNonePresent(namedArgs, message_id) {
     if (!isActive()) return;
 
     if (message_id === undefined || message_id === "") {
@@ -286,339 +286,341 @@ const commandForceNonePresent = async (namedArgs, message_id) => {
     await addPresenceTrackerToMessages(true);
 };
 
-SlashCommandParser.addCommandObject(
-	SlashCommand.fromProps({
-		name: "presenceForget",
-		callback: async (args, value) => {
-			if (!value) {
-				warn("WARN: No message id or id range provided for /presenceForget");
-				// @ts-ignore
-				toastr.error("WARN: No message id or id range provided for /presenceForget");
-				return;
-			}
-			await commandForget(args, value);
-			return "";
-		},
-        namedArgumentList: [
-            SlashCommandNamedArgument.fromProps({
-                name: 'name',
-                description: 'Character name - or unique character identifier (avatar key)',
-                typeList: [ARGUMENT_TYPE.STRING],
-                isRequired: true,
-                enumProvider: commonEnumProviders.characters('character'),
-            }),
-        ],
-		unnamedArgumentList: [
-            SlashCommandArgument.fromProps({
-                description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
-                typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
-                isRequired: true,
-                enumProvider: commonEnumProviders.messages(),
-            }),
-		],
-		helpString: `
-        <div>
-            Removes messages of specified index or range from the memory of a character.
-        </div>
-        <div>
-            <strong>Example:</strong>
-            <ul>
-                <li>
-                    <pre><code>/presenceForget name=John 0-9</code></pre>
-                </li>
-            </ul>
-        </div>`,
-	})
-);
+export function registerSlashCommands() {
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "presenceForget",
+            callback: async (args, value) => {
+                if (!value) {
+                    warn("WARN: No message id or id range provided for /presenceForget");
+                    // @ts-ignore
+                    toastr.error("WARN: No message id or id range provided for /presenceForget");
+                    return;
+                }
+                await commandForget(args, value);
+                return "";
+            },
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'name',
+                    description: 'Character name - or unique character identifier (avatar key)',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: commonEnumProviders.characters('character'),
+                }),
+            ],
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
+                    typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
+                    isRequired: true,
+                    enumProvider: commonEnumProviders.messages(),
+                }),
+            ],
+            helpString: `
+            <div>
+                Removes messages of specified index or range from the memory of a character.
+            </div>
+            <div>
+                <strong>Example:</strong>
+                <ul>
+                    <li>
+                        <pre><code>/presenceForget name=John 0-9</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
 
-SlashCommandParser.addCommandObject(
-	SlashCommand.fromProps({
-		name: "presenceForgetAll",
-		callback: async (args, value) => {
-			if (!value) {
-				warn("WARN: No character name provided for /presenceForgetAll command");
-				return;
-			}
-			value = String(value).trim();
-			await commandForgetAll(args, value);
-			return "";
-		},
-		unnamedArgumentList: [
-			SlashCommandArgument.fromProps({
-				description: "Character name - or unique character identifier (avatar key)",
-				typeList: [ARGUMENT_TYPE.STRING],
-				isRequired: true,
-				enumProvider: commonEnumProviders.characters("all"),
-			}),
-		],
-		helpString: `
-        <div>
-            Wipes the memory of a character.
-        </div>
-        <div>
-            <strong>Example:</strong>
-            <ul>
-                <li>
-                    <pre><code>/presenceForgetAll John</code></pre>
-                </li>
-            </ul>
-        </div>`,
-	})
-);
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "presenceForgetAll",
+            callback: async (args, value) => {
+                if (!value) {
+                    warn("WARN: No character name provided for /presenceForgetAll command");
+                    return;
+                }
+                value = String(value).trim();
+                await commandForgetAll(args, value);
+                return "";
+            },
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: "Character name - or unique character identifier (avatar key)",
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: commonEnumProviders.characters("all"),
+                }),
+            ],
+            helpString: `
+            <div>
+                Wipes the memory of a character.
+            </div>
+            <div>
+                <strong>Example:</strong>
+                <ul>
+                    <li>
+                        <pre><code>/presenceForgetAll John</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
 
-SlashCommandParser.addCommandObject(
-	SlashCommand.fromProps({
-		name: "presenceRemember",
-		callback: async (args, value) => {
-			if (!value) {
-				warn("WARN: No message id or id range provided for /presenceRemember");
-				// @ts-ignore
-				toastr.error("WARN: No message id or id range provided for /presenceRemember");
-				return;
-			}
-			await commandRemember(args, value);
-			return "";
-		},
-        namedArgumentList: [
-            SlashCommandNamedArgument.fromProps({
-                name: 'name',
-                description: 'Character name - or unique character identifier (avatar key)',
-                typeList: [ARGUMENT_TYPE.STRING],
-                isRequired: true,
-                enumProvider: commonEnumProviders.characters('character'),
-            }),
-        ],
-		unnamedArgumentList: [
-            SlashCommandArgument.fromProps({
-                description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
-                typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
-                isRequired: true,
-                enumProvider: commonEnumProviders.messages(),
-            }),
-		],
-		helpString: `
-        <div>
-            Adds messages of specified index or range to the memory of a character.
-        </div>
-        <div>
-            <strong>Example:</strong>
-            <ul>
-                <li>
-                    <pre><code>/presenceRemember name=John 0-9</code></pre>
-                </li>
-            </ul>
-        </div>`,
-	})
-);
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "presenceRemember",
+            callback: async (args, value) => {
+                if (!value) {
+                    warn("WARN: No message id or id range provided for /presenceRemember");
+                    // @ts-ignore
+                    toastr.error("WARN: No message id or id range provided for /presenceRemember");
+                    return;
+                }
+                await commandRemember(args, value);
+                return "";
+            },
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'name',
+                    description: 'Character name - or unique character identifier (avatar key)',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: commonEnumProviders.characters('character'),
+                }),
+            ],
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
+                    typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
+                    isRequired: true,
+                    enumProvider: commonEnumProviders.messages(),
+                }),
+            ],
+            helpString: `
+            <div>
+                Adds messages of specified index or range to the memory of a character.
+            </div>
+            <div>
+                <strong>Example:</strong>
+                <ul>
+                    <li>
+                        <pre><code>/presenceRemember name=John 0-9</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
 
-SlashCommandParser.addCommandObject(
-	SlashCommand.fromProps({
-		name: "presenceRememberAll",
-		callback: async (args, value) => {
-			if (!value) {
-				warn("WARN: No character name provided for /presenceRememberAll command");
-				return;
-			}
-			value = String(value).trim();
-			await commandRememberAll(args, value);
-			return "";
-		},
-		unnamedArgumentList: [
-			SlashCommandArgument.fromProps({
-				description: "name",
-				typeList: [ARGUMENT_TYPE.STRING],
-				isRequired: true,
-				enumProvider: commonEnumProviders.characters("all"),
-			}),
-		],
-		helpString: `
-        <div>
-            Adds all messages to the memory of a character.
-        </div>
-        <div>
-            <strong>Example:</strong>
-            <ul>
-                <li>
-                    <pre><code>/presenceRememberAll John</code></pre>
-                </li>
-            </ul>
-        </div>`,
-	})
-);
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "presenceRememberAll",
+            callback: async (args, value) => {
+                if (!value) {
+                    warn("WARN: No character name provided for /presenceRememberAll command");
+                    return;
+                }
+                value = String(value).trim();
+                await commandRememberAll(args, value);
+                return "";
+            },
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: "name",
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: commonEnumProviders.characters("all"),
+                }),
+            ],
+            helpString: `
+            <div>
+                Adds all messages to the memory of a character.
+            </div>
+            <div>
+                <strong>Example:</strong>
+                <ul>
+                    <li>
+                        <pre><code>/presenceRememberAll John</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
 
-SlashCommandParser.addCommandObject(
-	SlashCommand.fromProps({
-		name: "presenceReplace",
-		callback: async (args) => {
-			// @ts-ignore
-			await commandReplace(args);
-			return "";
-		},
-        namedArgumentList: [
-            SlashCommandNamedArgument.fromProps({
-                name: 'name',
-                description: 'Character name - or unique character identifier (avatar key) of the character to be replaced',
-                typeList: [ARGUMENT_TYPE.STRING],
-                isRequired: true,
-                enumProvider: commonEnumProviders.characters('character'),
-            }),
-            SlashCommandNamedArgument.fromProps({
-                name: 'replace',
-                description: 'Character name - or unique character identifier (avatar key) of the replacement',
-                typeList: [ARGUMENT_TYPE.STRING],
-                isRequired: true,
-                enumProvider: commonEnumProviders.characters('character'),
-            }),
-        ],
-		helpString: `
-        <div>
-            Transfers the messages from the memory of a character (forgets EVERYTHING) to another.
-        </div>
-        <div>
-            <strong>Example:</strong>
-            <ul>
-                <li>
-                    <pre><code>/presenceReplace name=Alice replace=Bob</code></pre>
-                </li>
-            </ul>
-        </div>`,
-	})
-);
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "presenceReplace",
+            callback: async (args) => {
+                // @ts-ignore
+                await commandReplace(args);
+                return "";
+            },
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'name',
+                    description: 'Character name - or unique character identifier (avatar key) of the character to be replaced',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: commonEnumProviders.characters('character'),
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'replace',
+                    description: 'Character name - or unique character identifier (avatar key) of the replacement',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: commonEnumProviders.characters('character'),
+                }),
+            ],
+            helpString: `
+            <div>
+                Transfers the messages from the memory of a character (forgets EVERYTHING) to another.
+            </div>
+            <div>
+                <strong>Example:</strong>
+                <ul>
+                    <li>
+                        <pre><code>/presenceReplace name=Alice replace=Bob</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
 
-// SlashCommandParser.addCommandObject(
-// 	SlashCommand.fromProps({
-// 		name: "presenceClone",
-// 		callback: async (args) => {
-			// @ts-ignore
-// 			await commandClone(args);
-// 			return "";
-// 		},
-//         namedArgumentList: [
-//             SlashCommandNamedArgument.fromProps({
-//                 name: 'name',
-//                 description: 'Character name - or unique character identifier (avatar key) with the memories to be cloned',
-//                 typeList: [ARGUMENT_TYPE.STRING],
-//                 isRequired: true,
-//                 enumProvider: commonEnumProviders.characters('character'),
-//             }),
-//             SlashCommandNamedArgument.fromProps({
-//                 name: 'clone',
-//                 description: 'Character name - or unique character identifier (avatar key) of the one receiving the memmories',
-//                 typeList: [ARGUMENT_TYPE.STRING],
-//                 isRequired: true,
-//                 enumProvider: commonEnumProviders.characters('character'),
-//             }),
-//         ],
-// 		helpString: `
-//         <div>
-//             Clones the messages from the memory of a character (forgets EVERYTHING) to another.
-//         </div>
-//         <div>
-//             <strong>Example:</strong>
-//             <ul>
-//                 <li>
-//                     <pre><code>/presenceClone name=Alice clone=Bob</code></pre>
-//                 </li>
-//             </ul>
-//         </div>`,
-// 	})
-// );
+    // SlashCommandParser.addCommandObject(
+    // 	SlashCommand.fromProps({
+    // 		name: "presenceClone",
+    // 		callback: async (args) => {
+                // @ts-ignore
+    // 			await commandClone(args);
+    // 			return "";
+    // 		},
+    //         namedArgumentList: [
+    //             SlashCommandNamedArgument.fromProps({
+    //                 name: 'name',
+    //                 description: 'Character name - or unique character identifier (avatar key) with the memories to be cloned',
+    //                 typeList: [ARGUMENT_TYPE.STRING],
+    //                 isRequired: true,
+    //                 enumProvider: commonEnumProviders.characters('character'),
+    //             }),
+    //             SlashCommandNamedArgument.fromProps({
+    //                 name: 'clone',
+    //                 description: 'Character name - or unique character identifier (avatar key) of the one receiving the memmories',
+    //                 typeList: [ARGUMENT_TYPE.STRING],
+    //                 isRequired: true,
+    //                 enumProvider: commonEnumProviders.characters('character'),
+    //             }),
+    //         ],
+    // 		helpString: `
+    //         <div>
+    //             Clones the messages from the memory of a character (forgets EVERYTHING) to another.
+    //         </div>
+    //         <div>
+    //             <strong>Example:</strong>
+    //             <ul>
+    //                 <li>
+    //                     <pre><code>/presenceClone name=Alice clone=Bob</code></pre>
+    //                 </li>
+    //             </ul>
+    //         </div>`,
+    // 	})
+    // );
 
-SlashCommandParser.addCommandObject(
-	SlashCommand.fromProps({
-		name: "presenceCopy",
-		callback: async (args) => {
-			// @ts-ignore
-			await commandCopy(args);
-			return "";
-		},
-        namedArgumentList: [
-            SlashCommandNamedArgument.fromProps({
-                name: 'source_index',
-                description: 'ID of the massage with the Tracker you want to copy',
-                typeList: [ARGUMENT_TYPE.NUMBER],
-                isRequired: true,
-                enumProvider: commonEnumProviders.messages(),
-            }),
-            SlashCommandNamedArgument.fromProps({
-                name: 'target_index',
-                description: 'ID of the message where you will paste the copied Tracker',
-                typeList: [ARGUMENT_TYPE.NUMBER],
-                isRequired: true,
-                enumProvider: commonEnumProviders.messages(),
-            }),
-        ],
-		helpString: `
-        <div>
-            Copy the Tracker of a message and paste it on another one - message indexes.
-        </div>
-        <div>
-            <strong>Example:</strong>
-            <ul>
-                <li>
-                    <pre><code>/presenceCopy source_index=2 target_index=80</code></pre>
-                </li>
-            </ul>
-        </div>`,
-	})
-);
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "presenceCopy",
+            callback: async (args) => {
+                // @ts-ignore
+                await commandCopy(args);
+                return "";
+            },
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'source_index',
+                    description: 'ID of the massage with the Tracker you want to copy',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: commonEnumProviders.messages(),
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'target_index',
+                    description: 'ID of the message where you will paste the copied Tracker',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: commonEnumProviders.messages(),
+                }),
+            ],
+            helpString: `
+            <div>
+                Copy the Tracker of a message and paste it on another one - message indexes.
+            </div>
+            <div>
+                <strong>Example:</strong>
+                <ul>
+                    <li>
+                        <pre><code>/presenceCopy source_index=2 target_index=80</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
 
-SlashCommandParser.addCommandObject(
-	SlashCommand.fromProps({
-		name: "presenceForceAllPresent",
-		callback: async (args, value) => {
-			await commandForceAllPresent(args, value);
-			return "";
-		},
-		unnamedArgumentList: [
-            SlashCommandArgument.fromProps({
-                description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
-                typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
-                isRequired: false,
-                enumProvider: commonEnumProviders.messages(),
-            }),
-        ],
-		helpString: `
-        <div>
-            Makes all characters remember EVERYTHING, IRREVERSIBLY, index or range optional.
-        </div>
-        <div>
-            <strong>Example:</strong>
-            <ul>
-                <li>
-                    <pre><code>/presenceForceAllPresent 0-9</code></pre>
-                </li>
-            </ul>
-        </div>`,
-	})
-);
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "presenceForceAllPresent",
+            callback: async (args, value) => {
+                await commandForceAllPresent(args, value);
+                return "";
+            },
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
+                    typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
+                    isRequired: false,
+                    enumProvider: commonEnumProviders.messages(),
+                }),
+            ],
+            helpString: `
+            <div>
+                Makes all characters remember EVERYTHING, IRREVERSIBLY, index or range optional.
+            </div>
+            <div>
+                <strong>Example:</strong>
+                <ul>
+                    <li>
+                        <pre><code>/presenceForceAllPresent 0-9</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
 
-SlashCommandParser.addCommandObject(
-	SlashCommand.fromProps({
-		name: "presenceForceNonePresent",
-		callback: async (args, value) => {
-			await commandForceNonePresent(args, value);
-			return "";
-		},
-		unnamedArgumentList: [
-            SlashCommandArgument.fromProps({
-                description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
-                typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
-                isRequired: false,
-                enumProvider: commonEnumProviders.messages(),
-            }),
-        ],
-		helpString: `
-        <div>
-            Makes all characters forget EVERYTHING, IRREVERSIBLY, index or range optional.
-        </div>
-        <div>
-            <strong>Example:</strong>
-            <ul>
-                <li>
-                    <pre><code>/presenceForceNonePresent 0-9</code></pre>
-                </li>
-            </ul>
-        </div>`,
-	})
-);
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "presenceForceNonePresent",
+            callback: async (args, value) => {
+                await commandForceNonePresent(args, value);
+                return "";
+            },
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
+                    typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
+                    isRequired: false,
+                    enumProvider: commonEnumProviders.messages(),
+                }),
+            ],
+            helpString: `
+            <div>
+                Makes all characters forget EVERYTHING, IRREVERSIBLY, index or range optional.
+            </div>
+            <div>
+                <strong>Example:</strong>
+                <ul>
+                    <li>
+                        <pre><code>/presenceForceNonePresent 0-9</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+}

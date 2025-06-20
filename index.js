@@ -2,6 +2,8 @@ import {characters, chat, chat_metadata, eventSource, event_types, getCurrentCha
 import {groups, is_group_generating, selected_group} from "../../../../scripts/group-chats.js";
 import {hideChatMessageRange} from "../../../chats.js";
 import {extension_settings} from "../../../extensions.js";
+import * as eventListeners from "./src/js/eventListeners.js";
+import * as slashCommands from "./src/js/slashCommands.js";
 
 const extensionName = "Presence";
 const extensionNameLong = `SillyTavern-${extensionName}`;
@@ -32,29 +34,29 @@ function initSettings() {
 	}
 
     debug(extensionSettings);
-};
+}
 
 // * Debug Methods
 
-export const log = (...msg) => {
+export function log(...msg) {
     if (extensionSettings.debugMode) console.log("[" + extensionName + "]", ...msg)
-};
+}
 
-export const warn = (...msg) => {
+export function warn(...msg) {
     if (extensionSettings.debugMode) console.warn("[" + extensionName + " Warning]", ...msg)
-};
+}
 
-export const debug = (...msg) => {
+export function debug(...msg) {
 	if (extensionSettings.debugMode) console.debug("[" + extensionName + " debug]", ...msg);
-};
+}
 
 // * Extension Methods
 
-const getMessage = async (mesId) => {
-	return chat[mesId];
-};
+export function isActive() {
+	return selected_group != null && extensionSettings.enabled;
+}
 
-export const getCurrentParticipants = async () => {
+export async function getCurrentParticipants() {
 	const group = groups.find((g) => g.id == selected_group);
 
 	var active = [...group.members];
@@ -75,16 +77,12 @@ export const getCurrentParticipants = async () => {
 	});
 
 	return { members: group.members, present: active };
-};
+}
 
-export const isActive = () => {
-	return selected_group != null && extensionSettings.enabled;
-};
-
-export const onNewMessage = async (mesId) => {
+export async function onNewMessage(mesId) {
 	if (!isActive()) return;
 
-	const mes = await getMessage(mesId);
+	const mes = chat[mesId];
 
 	mes.present = [...(await getCurrentParticipants()).present];
 
@@ -94,7 +92,7 @@ export const onNewMessage = async (mesId) => {
 	debug("present", mes.present);
 
 	if(extensionSettings.seeLast && !mes.is_user) {
-		const prevMes = await getMessage(mesId - 1);
+		const prevMes = chat[mesId - 1];
 
 		debug("prevMes", prevMes);
 
@@ -109,9 +107,9 @@ export const onNewMessage = async (mesId) => {
 	await saveChatDebounced();
 
 	debug("Present members added to last message");
-};
+}
 
-export const addPresenceTrackerToMessages = async (refresh) => {
+export async function addPresenceTrackerToMessages(refresh) {
 	if (refresh) {
 		let trackers = $("#chat .mes_presence_tracker");
 		let messages = trackers.closest(".mes");
@@ -128,7 +126,7 @@ export const addPresenceTrackerToMessages = async (refresh) => {
 
     for (const element of elements) {
         const mesId = $(element).attr("mesid");
-        const mes = await getMessage(mesId);
+        const mes = chat[mesId];
 
         if (mes.present == undefined)
             mes.present = [];
@@ -185,22 +183,9 @@ export const addPresenceTrackerToMessages = async (refresh) => {
         else if (extensionSettings.location == "bottom") $(".mes_block", element).append(presenceTracker);
         element.setAttribute("has_presence_tracker", "true");
     };
-};
+}
 
-const updateMessagePresence = async (mesId, member, isPresent) => {
-	const mes = await getMessage(mesId);
-	if (!mes.present) mes.present = [];
-
-	if (isPresent) {
-		mes.present.push(member);
-        mes.present = [...new Set(mes.present)];
-	} else {
-		mes.present = mes.present.filter((m) => m != member);
-	}
-	saveChatDebounced();
-};
-
-export const onChatChanged = async () => {
+export async function onChatChanged() {
 	$(document).off("mouseup touchend", "#show_more_messages", addPresenceTrackerToMessages);
 
 	if (!isActive()) {
@@ -216,9 +201,9 @@ export const onChatChanged = async () => {
 	});
 
 	$(document).on("mouseup touchend", "#show_more_messages", addPresenceTrackerToMessages);
-};
+}
 
-export const onGenerationAfterCommands = async (type, config, dryRun) => {
+export async function onGenerationAfterCommands(type, config, dryRun) {
 	if (!isActive() && !is_group_generating) return;
 
 	eventSource.once(event_types.GROUP_MEMBER_DRAFTED, draftHandler);
@@ -234,17 +219,30 @@ export const onGenerationAfterCommands = async (type, config, dryRun) => {
 	async function stopHandler() {
 		eventSource.removeListener(event_types.GROUP_MEMBER_DRAFTED, draftHandler);
 	}
-};
-
-export const toggleVisibilityAllMessages = async (state = true) => {
-	hideChatMessageRange(0, chat.length - 1, state);
 }
 
-const onGroupMemberDrafted = async (type, charId) => {
+export async function toggleVisibilityAllMessages(state = true) {
+	await hideChatMessageRange(0, chat.length - 1, state);
+}
+
+async function updateMessagePresence(mesId, member, isPresent) {
+	const mes = chat[mesId];
+	if (!mes.present) mes.present = [];
+
+	if (isPresent) {
+		mes.present.push(member);
+        mes.present = [...new Set(mes.present)];
+	} else {
+		mes.present = mes.present.filter((m) => m != member);
+	}
+	saveChatDebounced();
+}
+
+async function onGroupMemberDrafted(type, charId) {
 	if (!isActive()) return;
 
 	const char = characters[charId].avatar;
-	const lastMessage = await getMessage(chat.length - 1);
+	const lastMessage = await chat[chat.length - 1];
 	const isUserContinue = (type == "continue" && lastMessage.is_user);
 
 	if (
@@ -253,9 +251,9 @@ const onGroupMemberDrafted = async (type, charId) => {
 		chat_metadata.ignore_presence?.includes(char)
 	) {
 		debug("Impersonation detected");
-        toggleVisibilityAllMessages(true);
+        await toggleVisibilityAllMessages(true);
 	} else {
-		toggleVisibilityAllMessages(false);
+		await toggleVisibilityAllMessages(false);
 
 		const messages = chat.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => m.present.includes(char) || m.present.includes("presence_universal_tracker"));
 
@@ -271,9 +269,9 @@ const onGroupMemberDrafted = async (type, charId) => {
 
 		debug("done");
 	}
-};
+}
 
-const togglePresenceTracking = async (e) => {
+async function togglePresenceTracking(e) {
 	const target = $(e.target).closest(".group_member");
 	const charId = target.data("chid");
 	const charAvatar = characters[charId].avatar;
@@ -289,9 +287,9 @@ const togglePresenceTracking = async (e) => {
 
 	saveChatDebounced();
 	updatePresenceTrackingButton(target);
-};
+}
 
-const updatePresenceTrackingButton = async (member) => {
+async function updatePresenceTrackingButton(member) {
 	const target = member.find(".ignore_presence_toggle");
 	const charId = member.data("chid");
 
@@ -300,9 +298,9 @@ const updatePresenceTrackingButton = async (member) => {
 	} else {
 		target.addClass("active");
 	}
-};
+}
 
-const migrateOldTrackingData = async () => {
+async function migrateOldTrackingData() {
 	if (extension_settings[extensionName] && extension_settings[extensionName][getCurrentChatId()]) {
 		var oldData = extension_settings[extensionName][getCurrentChatId()];
 		var oldDataKeys = Object.keys(oldData);
@@ -332,7 +330,7 @@ const migrateOldTrackingData = async () => {
 		await saveChatDebounced();
 		delete extension_settings[extensionName][getCurrentChatId()];
 	}
-};
+}
 
 jQuery(async () => {
 	const groupMemberTemplateIcons = $(".group_member_icon");
@@ -357,6 +355,7 @@ jQuery(async () => {
 
 	// Add Settings Panel
 	await initSettings();
+
 	const settingsHtml = $(await $.get(`${extensionFolderPath}/html/settings.html`));
 
 	settingsHtml.find("#presence_enable").prop("checked", extensionSettings.enabled);
@@ -409,4 +408,7 @@ jQuery(async () => {
 		extensionSettings.universalTrackerOn = $(e.target).prop("checked");
 		saveSettingsDebounced();
 	});
+
+    eventListeners.startListeners();
+    slashCommands.registerSlashCommands();
 });
