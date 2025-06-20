@@ -44,6 +44,7 @@ Click this button and it lights up, that will indicate that this character can s
 - `/presenceReplace name=<char_name> replace=<char_name>` Transfer the messages from the memory of a character to another.
 - `/presenceForceNonePresent <mes_index|mes_range>?` Makes **all** characters forget **everything**.
 - `/presenceForceAllPresent <mes_index|mes_range>?` Makes **all** characters remember **everything**.
+- `/presenceCopy source_index=<mes_index> target_index=<mes_index>` Copies the Tracker of a message and pastes it on another one - it does not replace the original tracker.
 
 ## Thanks to Contributors
 - **cloak1505** for the update to the commands descriptions.
