@@ -2,7 +2,7 @@
 	--presence-tracker-transition: linear 0.15s;
 }
 
-.no-presence-animations {
+#chat.no-presence-animations {
 	--presence-tracker-transition: none !important;
 }
 
