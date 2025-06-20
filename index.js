@@ -19,23 +19,6 @@ const defaultSettings = {
     universalTrackerOn: false
 };
 
-// * Initialize Extension
-
-function initExtensionSettings() {
-
-	if (!context.extensionSettings[extensionName]) {
-	    context.extensionSettings[extensionName] = structuredClone(defaultSettings);
-	}
-
-	for (const key of Object.keys(defaultSettings)) {
-	    if (context.extensionSettings[extensionName][key] === undefined) {
-		   context.extensionSettings[extensionName][key] = defaultSettings[key];
-	    }
-	}
-
-    debug(extensionSettings);
-}
-
 // * Debug Methods
 
 export function log(...msg) {
@@ -51,6 +34,34 @@ export function debug(...msg) {
 }
 
 // * Extension Methods
+
+/** Destroys an element and all data associated with it
+    @param {String|HTMLElement|JQuery<any>} element
+*/
+function destroyElement(element) {
+    const elem = $(element);
+
+    elem.find('*').each(function() {
+        const child = $(this);
+
+        // Destroy even listeners
+        child.off();
+
+        // Clean any ghost data
+        $.cleanData([child[0]]);
+
+        // Destroy elements
+        child.remove();
+    });
+
+    const leftoversCount = elem.children().length;
+
+    if (leftoversCount) {
+        elem.empty();
+    }
+
+	elem.remove();
+}
 
 export function isActive() {
 	return selected_group != null && extensionSettings.enabled;
@@ -113,13 +124,16 @@ export async function addPresenceTrackerToMessages(refresh) {
 	if (refresh) {
 		let trackers = $("#chat .mes_presence_tracker");
 		let messages = trackers.closest(".mes");
-		trackers.remove();
-		messages.removeAttr("has_presence_tracker");
+
+        messages.removeAttr("has_presence_tracker");
+
+        destroyElement(trackers);
 	}
+
 	let selector = "#chat .mes:not(.smallSysMes,[has_presence_tracker=true])";
 
 	if (refresh) {
-		$("#chat .mes_presence_tracker").remove();
+        destroyElement("#chat .mes_presence_tracker");
 	}
 
     const elements = $(selector).toArray();
@@ -289,17 +303,6 @@ async function togglePresenceTracking(e) {
 	updatePresenceTrackingButton(target);
 }
 
-async function updatePresenceTrackingButton(member) {
-	const target = member.find(".ignore_presence_toggle");
-	const charId = member.data("chid");
-
-	if (!chat_metadata?.ignore_presence?.includes(characters[charId].avatar)) {
-		target.removeClass("active");
-	} else {
-		target.addClass("active");
-	}
-}
-
 async function migrateOldTrackingData() {
 	if (extension_settings[extensionName] && extension_settings[extensionName][getCurrentChatId()]) {
 		var oldData = extension_settings[extensionName][getCurrentChatId()];
@@ -329,6 +332,34 @@ async function migrateOldTrackingData() {
 		debug(newData);
 		await saveChatDebounced();
 		delete extension_settings[extensionName][getCurrentChatId()];
+	}
+}
+
+// * Initialize Extension
+
+function initExtensionSettings() {
+
+	if (!context.extensionSettings[extensionName]) {
+	    context.extensionSettings[extensionName] = structuredClone(defaultSettings);
+	}
+
+	for (const key of Object.keys(defaultSettings)) {
+	    if (context.extensionSettings[extensionName][key] === undefined) {
+		   context.extensionSettings[extensionName][key] = defaultSettings[key];
+	    }
+	}
+
+    debug(extensionSettings);
+}
+
+async function updatePresenceTrackingButton(member) {
+	const target = member.find(".ignore_presence_toggle");
+	const charId = member.data("chid");
+
+	if (!chat_metadata?.ignore_presence?.includes(characters[charId].avatar)) {
+		target.removeClass("active");
+	} else {
+		target.addClass("active");
 	}
 }
 
