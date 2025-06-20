@@ -193,8 +193,6 @@ export async function onChatChanged() {
 		return;
 	}
 
-	await migrateOldTrackingData();
-
 	addPresenceTrackerToMessages(true);
 
 	$("#rm_group_members .group_member").each((index, element) => {
@@ -235,6 +233,7 @@ async function updateMessagePresence(mesId, member, isPresent) {
 	} else {
 		mes.present = mes.present.filter((m) => m != member);
 	}
+
 	saveChatDebounced();
 }
 
@@ -285,36 +284,6 @@ async function togglePresenceTracking(e) {
 
 	saveChatDebounced();
 	updatePresenceTrackingButton(target);
-}
-
-async function migrateOldTrackingData() {
-	if (extension_settings[extensionName] && extension_settings[extensionName][getCurrentChatId()]) {
-		var oldData = extension_settings[extensionName][getCurrentChatId()];
-		var oldDataKeys = Object.keys(oldData);
-		var context = SillyTavern.getContext();
-		var characters = context.characters;
-		var charMap = {};
-		characters.forEach((char) => {
-			var name = char.name.replace(/(\.card)?[0-9]*\.png/, "");
-			if (oldDataKeys.includes(name)) charMap[name] = char.avatar;
-		});
-		var newData = {};
-		oldDataKeys.forEach((name) => {
-			oldData[name].forEach((mesId) => {
-				if (!newData[mesId]) newData[mesId] = [];
-				newData[mesId].push(charMap[name]);
-			});
-		});
-
-		const messages = chat;
-
-		Object.keys(newData).forEach((mesId) => {
-			if (messages[mesId]) messages[mesId].present = newData[mesId];
-		});
-
-        await saveChatDebounced();
-		delete extension_settings[extensionName][getCurrentChatId()];
-	}
 }
 
 // * Initialize Extension
