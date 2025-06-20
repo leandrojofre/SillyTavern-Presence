@@ -16,7 +16,8 @@ const defaultSettings = {
 	debugMode: false,
 	seeLast: true,
 	includeMuted: false,
-    universalTrackerOn: false
+    universalTrackerOn: false,
+    disableTransition: false
 };
 
 // * Debug Methods
@@ -396,6 +397,20 @@ jQuery(async () => {
 		extensionSettings.includeMuted = $(e.target).prop("checked");
 		saveSettingsDebounced();
 	});
+
+	settingsHtml.find("#presence_disableTransition").on("change", (e) => {
+        const checked = $(e.target).prop("checked");
+        const tracker = document.getElementById('chat');
+
+        if (checked)
+            tracker.style.setProperty('--presence-tracker-transition', 'none');
+        else
+            tracker.style.setProperty('--presence-tracker-transition', 'linear 0.15s');
+
+		extensionSettings.disableTransition = checked;
+		saveSettingsDebounced();
+	});
+	settingsHtml.find("#presence_disableTransition").prop("checked", extensionSettings.disableTransition).trigger('change');
 
 	settingsHtml.find("#presence_debug").prop("checked", extensionSettings.debugMode);
 	settingsHtml.find("#presence_debug").on("change", (e) => {

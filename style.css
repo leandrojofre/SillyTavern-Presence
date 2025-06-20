@@ -1,16 +1,19 @@
+#chat {
+	--presence-tracker-transition: linear 0.15s;
+}
+
 #chat .mes_block .mes_presence_tracker {
 	--icon-size: 60px;
 	--gap-size: 15px;
 	--icon-size-minified: 20px;
 	--gap-size-minified: 5px;
-	--transition: linear 0.15s;
 
 	padding-left: 0;
 	padding-top: 5px;
 	padding-bottom: 0;
 	display: flex;
 	flex-wrap: wrap;
-	transition: var(--transition);
+	transition: var(--presence-tracker-transition);
 	max-width: 100%;
 	min-width: 100px;
 	width: fit-content;
@@ -29,7 +32,7 @@
 	width: var(--icon-size-minified);
 	opacity: 40%;
 	font-size: var(--mainFontSize);
-	transition: var(--transition);
+	transition: var(--presence-tracker-transition);
 }
 
 #chat .mes_block .mes_presence_tracker:hover:before {
@@ -44,7 +47,7 @@
 	border-radius: 50%;
 	overflow: hidden;
 	opacity: 0%;
-	transition: var(--transition);
+	transition: var(--presence-tracker-transition);
 	cursor: pointer;
 	margin-right: 0;
 	text-align: right;
@@ -58,7 +61,7 @@
 }
 
 #chat .mes_block .mes_presence_tracker .presence_icon img {
-	transition: var(--transition);
+	transition: var(--presence-tracker-transition);
 	width: var(--icon-size-minified);
 }
 
@@ -72,7 +75,7 @@
 
 #chat .mes_block .mes_presence_tracker .presence_icon.present.universal {
     font-size: var(--icon-size-minified);
-    
+
     .fa-solid::before {
         vertical-align: super;
     }
