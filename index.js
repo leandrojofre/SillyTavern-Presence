@@ -398,19 +398,15 @@ jQuery(async () => {
 		saveSettingsDebounced();
 	});
 
+	settingsHtml.find("#presence_disableTransition").prop("checked", extensionSettings.disableTransition);
 	settingsHtml.find("#presence_disableTransition").on("change", (e) => {
         const checked = $(e.target).prop("checked");
-        const tracker = document.getElementById('chat');
 
-        if (checked)
-            tracker.style.setProperty('--presence-tracker-transition', 'none');
-        else
-            tracker.style.setProperty('--presence-tracker-transition', 'linear 0.15s');
+        $('#chat').toggleClass('no-presence-animations', checked);
 
 		extensionSettings.disableTransition = checked;
 		saveSettingsDebounced();
 	});
-	settingsHtml.find("#presence_disableTransition").prop("checked", extensionSettings.disableTransition).trigger('change');
 
 	settingsHtml.find("#presence_debug").prop("checked", extensionSettings.debugMode);
 	settingsHtml.find("#presence_debug").on("change", (e) => {
@@ -419,6 +415,7 @@ jQuery(async () => {
 	});
 
 	$("#extensions_settings").append(settingsHtml);
+    $("#presence_disableTransition").trigger('change');
 
     const universalTrackerAlwaysOn = `
         <label class="checkbox_label whitespacenowrap" title="Set the universal tracker to active for new messages" style="margin-top: 7px">

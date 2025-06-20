@@ -2,6 +2,10 @@
 	--presence-tracker-transition: linear 0.15s;
 }
 
+.no-presence-animations {
+	--presence-tracker-transition: none !important;
+}
+
 #chat .mes_block .mes_presence_tracker {
 	--icon-size: 60px;
 	--gap-size: 15px;
