@@ -186,7 +186,7 @@ export async function addPresenceTrackerToMessages(refresh) {
 }
 
 export async function onChatChanged() {
-	$("#show_more_messages").off("mouseup touchend", addPresenceTrackerToMessages);
+	$(document).off("mouseup touchend", "#show_more_messages", addPresenceTrackerToMessages);
 
 	if (!isActive()) {
 		return;
@@ -200,7 +200,7 @@ export async function onChatChanged() {
 		updatePresenceTrackingButton($(element));
 	});
 
-	$("#show_more_messages").on("mouseup touchend", addPresenceTrackerToMessages);
+	$(document).on("mouseup touchend", "#show_more_messages", addPresenceTrackerToMessages);
 }
 
 export async function onGenerationAfterCommands(type, config, dryRun) {
