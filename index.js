@@ -74,10 +74,6 @@ export async function getCurrentParticipants() {
 
     if (extensionSettings.universalTrackerOn) active.push('presence_universal_tracker');
 
-	debug("includeMuted", extensionSettings.includeMuted);
-	debug("active", active);
-	debug("chat_metadata.ignore_presence", chat_metadata.ignore_presence);
-
 	if (!extensionSettings.includeMuted)
 		active = active.filter(char => !group.disabled_members.includes(char));
 
@@ -97,27 +93,17 @@ export async function onNewMessage(mesId) {
 
 	mes.present = [...(await getCurrentParticipants()).present];
 
-	debug("seeLast", extensionSettings.seeLast);
-	debug("is_user", mes.is_user);
-	debug("original_avatar", mes.original_avatar);
-	debug("present", mes.present);
-
 	if(extensionSettings.seeLast && !mes.is_user) {
 		const prevMes = chat[mesId - 1];
-
-		debug("prevMes", prevMes);
 
 		if(!prevMes.present) prevMes.present = [];
 
 		if(!prevMes.present.includes(mes.original_avatar)){
 			prevMes.present.push(mes.original_avatar);
-			debug(prevMes.present);
 		}
 	}
 
 	await saveChatDebounced();
-
-	debug("Present members added to last message");
 }
 
 export async function addPresenceTrackerToMessages(refresh) {
@@ -200,7 +186,7 @@ export async function addPresenceTrackerToMessages(refresh) {
 }
 
 export async function onChatChanged() {
-	$(document).off("mouseup touchend", "#show_more_messages", addPresenceTrackerToMessages);
+	$("#show_more_messages").off("mouseup touchend", addPresenceTrackerToMessages);
 
 	if (!isActive()) {
 		return;
@@ -214,7 +200,7 @@ export async function onChatChanged() {
 		updatePresenceTrackingButton($(element));
 	});
 
-	$(document).on("mouseup touchend", "#show_more_messages", addPresenceTrackerToMessages);
+	$("#show_more_messages").on("mouseup touchend", addPresenceTrackerToMessages);
 }
 
 export async function onGenerationAfterCommands(type, config, dryRun) {
@@ -224,8 +210,7 @@ export async function onGenerationAfterCommands(type, config, dryRun) {
 	eventSource.once(event_types.GENERATION_STOPPED, stopHandler);
 
 	async function draftHandler(...args) {
-		debug("GROUP_MEMBER_DRAFTED", args);
-		eventSource.removeListener(event_types.GENERATION_STOPPED, stopHandler);
+        eventSource.removeListener(event_types.GENERATION_STOPPED, stopHandler);
 		onGroupMemberDrafted(type, args[0]);
 		return;
 	}
@@ -264,15 +249,15 @@ async function onGroupMemberDrafted(type, charId) {
 		isUserContinue ||
 		chat_metadata.ignore_presence?.includes(char)
 	) {
-		debug("Impersonation detected");
         await toggleVisibilityAllMessages(true);
 	} else {
 		await toggleVisibilityAllMessages(false);
 
-		const messages = chat.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => m.present.includes(char) || m.present.includes("presence_universal_tracker"));
+		const messages = chat
+            .map((m, i) => ({ id: i, present: m.present ?? [] }))
+            .filter((m) => m.present.includes(char) || m.present.includes("presence_universal_tracker"));
 
 		for (const message of messages) {
-			debug("Unhiding", message);
 			hideChatMessageRange(message.id, message.id, true);
 		}
 
@@ -280,8 +265,6 @@ async function onGroupMemberDrafted(type, charId) {
             const lastMessageID = chat.length - 1;
             hideChatMessageRange(lastMessageID, lastMessageID, true);
         }
-
-		debug("done");
 	}
 }
 
@@ -328,9 +311,7 @@ async function migrateOldTrackingData() {
 			if (messages[mesId]) messages[mesId].present = newData[mesId];
 		});
 
-		log("Migrated old tracking data");
-		debug(newData);
-		await saveChatDebounced();
+        await saveChatDebounced();
 		delete extension_settings[extensionName][getCurrentChatId()];
 	}
 }
@@ -348,8 +329,6 @@ function initExtensionSettings() {
 		   context.extensionSettings[extensionName][key] = defaultSettings[key];
 	    }
 	}
-
-    debug(extensionSettings);
 }
 
 async function updatePresenceTrackingButton(member) {
