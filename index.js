@@ -21,7 +21,7 @@ const defaultSettings = {
 
 // * Initialize Extension
 
-function initSettings() {
+function initExtensionSettings() {
 
 	if (!context.extensionSettings[extensionName]) {
 	    context.extensionSettings[extensionName] = structuredClone(defaultSettings);
@@ -43,7 +43,7 @@ export function log(...msg) {
 }
 
 export function warn(...msg) {
-    if (extensionSettings.debugMode) console.warn("[" + extensionName + " Warning]", ...msg)
+    console.warn("[" + extensionName + " Warning]", ...msg)
 }
 
 export function debug(...msg) {
@@ -353,40 +353,41 @@ jQuery(async () => {
 
 	observer.observe(groupMemberList, { childList: true, subtree: true });
 
-	// Add Settings Panel
-	await initSettings();
+	initExtensionSettings();
+
+    eventListeners.startListeners();
+    slashCommands.registerSlashCommands();
 
 	const settingsHtml = $(await $.get(`${extensionFolderPath}/html/settings.html`));
 
 	settingsHtml.find("#presence_enable").prop("checked", extensionSettings.enabled);
-	settingsHtml.find("#presence_location").val(extensionSettings.location);
-	settingsHtml.find("#presence_seeLast").on("input", function(e) {
-        extensionSettings.seeLast = Boolean($(e.target).prop("checked"));
-    });
-	settingsHtml.find("#presence_includeMuted").prop("checked", extensionSettings.includeMuted);
-	settingsHtml.find("#presence_debug").prop("checked", extensionSettings.debugMode);
-
 	settingsHtml.find("#presence_enable").on("change", (e) => {
 		extensionSettings.enabled = $(e.target).prop("checked");
 		saveSettingsDebounced();
 	});
 
+	settingsHtml.find("#presence_location").val(extensionSettings.location);
 	settingsHtml.find("#presence_location").on("change", (e) => {
 		extensionSettings.location = $(e.target).val();
 		saveSettingsDebounced();
 		addPresenceTrackerToMessages(true);
 	});
 
+	settingsHtml.find("#presence_seeLast").on("input", function(e) {
+        extensionSettings.seeLast = Boolean($(e.target).prop("checked"));
+    });
 	settingsHtml.find("#presence_seeLast").on("change", (e) => {
 		extensionSettings.seeLast = $(e.target).prop("checked");
 		saveSettingsDebounced();
 	});
 
+	settingsHtml.find("#presence_includeMuted").prop("checked", extensionSettings.includeMuted);
 	settingsHtml.find("#presence_includeMuted").on("change", (e) => {
 		extensionSettings.includeMuted = $(e.target).prop("checked");
 		saveSettingsDebounced();
 	});
 
+	settingsHtml.find("#presence_debug").prop("checked", extensionSettings.debugMode);
 	settingsHtml.find("#presence_debug").on("change", (e) => {
 		extensionSettings.debugMode = $(e.target).prop("checked");
 		saveSettingsDebounced();
@@ -404,11 +405,7 @@ jQuery(async () => {
     $('#GroupFavDelOkBack .flex1').append(universalTrackerAlwaysOn);
 	$('#presence_universal_tracer_on').prop("checked", extensionSettings.universalTrackerOn);
     $('#presence_universal_tracer_on').on("change", (e) => {
-        debug("universalTrackerOn", $(e.target).prop("checked"));
 		extensionSettings.universalTrackerOn = $(e.target).prop("checked");
 		saveSettingsDebounced();
 	});
-
-    eventListeners.startListeners();
-    slashCommands.registerSlashCommands();
 });
