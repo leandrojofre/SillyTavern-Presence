@@ -3,7 +3,7 @@ import { event_types, eventSource } from "../../../../../../script.js";
 
 async function messageSent(...args) {
     log("MESSAGE_SENT", args);
-    onNewMessage(...args);
+    await onNewMessage(...args);
     return;
 }
 
@@ -15,7 +15,7 @@ async function generationStopped(...args) {
 
 async function messageReceived(...args) {
     log("MESSAGE_RECEIVED", args);
-    onNewMessage(...args);
+    await onNewMessage(...args);
     await toggleVisibilityAllMessages(true);
     return;
 };
@@ -41,7 +41,7 @@ export function startListeners() {
 
     eventSource.on(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
         log("GENERATION_AFTER_COMMANDS", args);
-        onGenerationAfterCommands(...args);
+        await onGenerationAfterCommands(...args);
         return;
     });
 
