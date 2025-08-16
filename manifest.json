@@ -1,12 +1,12 @@
 {
     "display_name": "Presence",
-    "loading_order": 200,
+    "loading_order": 400,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "Lackyas, Kaldigo and Leandro",
-    "version": "3.1.0",
-    "homePage": "https://github.com/lackyas/SillyTavern-Presence",
-    "auto_update": false
+    "version": "3.1.1",
+    "homePage": "https://github.com/leandrojofre/SillyTavern-Presence.git",
+    "auto_update": true
 }
