@@ -1,4 +1,4 @@
-import {characters, chat, chat_metadata, eventSource, event_types, getCurrentChatId, saveChatDebounced, saveSettingsDebounced} from "../../../../script.js";
+import {characters, chat, chat_metadata, eventSource, event_types, saveChatDebounced, saveSettingsDebounced} from "../../../../script.js";
 import {groups, is_group_generating, selected_group} from "../../../../scripts/group-chats.js";
 import {hideChatMessageRange} from "../../../chats.js";
 import {extension_settings} from "../../../extensions.js";
@@ -189,11 +189,8 @@ export async function addPresenceTrackerToMessages(refresh) {
 export async function onChatChanged() {
 	$(document).off("mouseup touchend", "#show_more_messages", addPresenceTrackerToMessages);
 
-	if (!isActive()) {
-		return;
-	}
-
-	addPresenceTrackerToMessages(true);
+	if (!isActive()) return;
+	await addPresenceTrackerToMessages(true);
 
 	$("#rm_group_members .group_member").each((index, element) => {
 		updatePresenceTrackingButton($(element));
@@ -205,22 +202,21 @@ export async function onChatChanged() {
 export async function onGenerationAfterCommands(type, config, dryRun) {
 	if (!isActive() && !is_group_generating) return;
 
-	eventSource.once(event_types.GROUP_MEMBER_DRAFTED, draftHandler);
-	eventSource.once(event_types.GENERATION_STOPPED, stopHandler);
-
 	async function draftHandler(...args) {
         eventSource.removeListener(event_types.GENERATION_STOPPED, stopHandler);
-		onGroupMemberDrafted(type, args[0]);
-		return;
+		return await onGroupMemberDrafted(type, args[0]);
 	}
 
 	async function stopHandler() {
 		eventSource.removeListener(event_types.GROUP_MEMBER_DRAFTED, draftHandler);
 	}
+
+	eventSource.once(event_types.GROUP_MEMBER_DRAFTED, draftHandler);
+	eventSource.once(event_types.GENERATION_STOPPED,stopHandler);
 }
 
 export async function toggleVisibilityAllMessages(state = true) {
-	await hideChatMessageRange(0, chat.length - 1, state);
+	hideChatMessageRange(0, chat.length - 1, state);
 }
 
 async function updateMessagePresence(mesId, member, isPresent) {
@@ -242,23 +238,41 @@ async function onGroupMemberDrafted(type, charId) {
 
 	const char = characters[charId].avatar;
 	const lastMessage = await chat[chat.length - 1];
-	const isUserContinue = (type == "continue" && lastMessage.is_user);
+	const isUserContinue = (type === "continue" && lastMessage.is_user);
 
 	if (
 		type == "impersonate" ||
 		isUserContinue ||
 		chat_metadata.ignore_presence?.includes(char)
 	) {
-        await toggleVisibilityAllMessages(true);
+        toggleVisibilityAllMessages(true);
 	} else {
-		await toggleVisibilityAllMessages(false);
+		toggleVisibilityAllMessages(false);
 
-		const messages = chat
-            .map((m, i) => ({ id: i, present: m.present ?? [] }))
-            .filter((m) => m.present.includes(char) || m.present.includes("presence_universal_tracker"));
+        let current_chunk = 0;
+		const message_id_chunks = [{}];
 
-		for (const message of messages) {
-			hideChatMessageRange(message.id, message.id, true);
+        chat.forEach((mess, i) => {
+            const m = { id: i, present: mess.present ?? [] };
+            const unhide = m.present.includes(char) || m.present.includes("presence_universal_tracker");
+
+            if (!unhide) return false;
+
+            if (message_id_chunks[current_chunk].start === undefined) {
+                message_id_chunks[current_chunk].start = m.id;
+                message_id_chunks[current_chunk].end = m.id;
+            } else if (message_id_chunks[current_chunk].end + 1 === m.id) {
+                message_id_chunks[current_chunk].end = m.id;
+            } else {
+                current_chunk++;
+                message_id_chunks.push({});
+                message_id_chunks[current_chunk].start = m.id;
+                message_id_chunks[current_chunk].end = m.id;
+            }
+        });
+
+		for (const id_chunk of message_id_chunks) {
+			hideChatMessageRange(id_chunk.start, id_chunk.end, true);
 		}
 
         if (extensionSettings.seeLast) {
