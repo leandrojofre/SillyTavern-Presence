@@ -103,10 +103,6 @@
 	width: var(--icon-size) !important;
 }
 
-#rm_group_members .ignore_presence_toggle {
-	margin-right: 10px;
-}
-
 #rm_group_members .ignore_presence_toggle::before {
 	width: 24px;
 }

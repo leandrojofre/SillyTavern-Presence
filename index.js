@@ -330,7 +330,7 @@ jQuery(async () => {
 	const groupMemberTemplateIcons = $(".group_member_icon");
 	const ignorePresenceButton = $(`<div title="Ignore Presence" class="ignore_presence_toggle fa-solid fa-eye-slash right_menu_button fa-lg interactable" tabindex="0"></div>`);
 
-	groupMemberTemplateIcons.before(ignorePresenceButton);
+	groupMemberTemplateIcons.prepend(ignorePresenceButton);
 
 	$("#rm_group_members").on("click", ".ignore_presence_toggle", togglePresenceTracking);
 
