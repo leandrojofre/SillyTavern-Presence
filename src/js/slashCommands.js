@@ -5,6 +5,7 @@ import { ARGUMENT_TYPE, SlashCommandArgument, SlashCommandNamedArgument } from "
 import { commonEnumProviders } from "../../../../../slash-commands/SlashCommandCommonEnumsProvider.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
 import { stringToRange } from "../../../../../utils.js";
+import { t } from "../../../../../i18n.js";
 
 // @ts-check
 
@@ -490,7 +491,7 @@ export function registerSlashCommands() {
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
             name: "presenceReplace",
-            callback: async (args, value) => {
+            callback: async (/** @type {object} */args, value) => {
                 await commandReplace(args, value);
                 return "";
             },
@@ -549,7 +550,7 @@ export function registerSlashCommands() {
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
             name: "presenceCopy",
-            callback: async (args) => {
+            callback: async (/** @type {object} */args) => {
                 await commandCopy(args);
                 return "";
             },
