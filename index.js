@@ -5,6 +5,12 @@ import {extension_settings} from "../../../extensions.js";
 import * as eventListeners from "./src/js/eventListeners.js";
 import * as slashCommands from "./src/js/slashCommands.js";
 
+// @ts-check
+
+/**
+ * @typedef {ChatMessage & { present?: string[] }} ChatMessageExtended
+ */
+
 const extensionName = "Presence";
 const extensionNameLong = `SillyTavern-${extensionName}`;
 const extensionFolderPath = `scripts/extensions/third-party/${extensionNameLong}`;
@@ -220,6 +226,7 @@ export async function toggleVisibilityAllMessages(state = true) {
 }
 
 async function updateMessagePresence(mesId, member, isPresent) {
+	/** @type {ChatMessageExtended} */
 	const mes = chat[mesId];
 	if (!mes.present) mes.present = [];
 
@@ -250,9 +257,11 @@ async function onGroupMemberDrafted(type, charId) {
 		toggleVisibilityAllMessages(false);
 
         let current_chunk = 0;
+
+		/** @type {Array<{start?: number, end?: number}>} */
 		const message_id_chunks = [{}];
 
-        chat.forEach((mess, i) => {
+        chat.forEach((/** @type {ChatMessageExtended} */mess, i) => {
             const m = { id: i, present: mess.present ?? [] };
             const unhide = m.present.includes(char) || m.present.includes("presence_universal_tracker");
 

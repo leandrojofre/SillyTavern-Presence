@@ -6,6 +6,18 @@ import { commonEnumProviders } from "../../../../../slash-commands/SlashCommandC
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
 import { stringToRange } from "../../../../../utils.js";
 
+// @ts-check
+
+/**
+ * @typedef {ChatMessage & { present?: string[] }} ChatMessageExtended
+ */
+
+/** @type {Function} */
+toastr.error
+
+/** @type {Function} */
+toastr.warning
+
 async function commandForget(namedArgs, message_id) {
     if (!isActive()) return;
 
@@ -16,23 +28,20 @@ async function commandForget(namedArgs, message_id) {
 
     if (charName.length == 0) return;
     if (messages_number == null)
-        // @ts-ignore
         return toastr.error("WARN: Id range provided for /presenceRemember is invalid");
 
     const char = characters.find((character) => character.name == charName)?.avatar;
 
     if (char === undefined)
-        // @ts-ignore
         return toastr.error("WARN: Character name provided for /presenceRemember doesn't exist within the character list");
 
+    /** @type {ChatMessageExtended[]} */
     const chat_messages = chat;
 
     if (typeof messages_number === "number") {
         if (isNaN(messages_number))
-            // @ts-ignore
             return toastr.error("WARN: message id provided for /presenceRemember is not a number");
         if (chat_messages[messages_number] === undefined)
-            // @ts-ignore
             return toastr.error("WARN: message id provided for /presenceRemember doesn't exist within the chat");
 
         if (!chat_messages[messages_number].present)
@@ -64,12 +73,13 @@ async function commandForgetAll(namedArgs, charName) {
 
     const char = characters.find((c) => c.name == charName).avatar;
 
-    const messages = chat;
-    const charMessages = chat.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => m.present.includes(char));
+    /** @type {ChatMessageExtended[]} */
+    const chat_messages = chat;
+    const charMessages = chat_messages.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => m.present.includes(char));
 
     for (const charMes of charMessages) {
         debug(charMes);
-        messages[charMes.id].present = charMes.present.filter((m) => m != char);
+        chat_messages[charMes.id].present = charMes.present.filter((m) => m != char);
     }
 
     log("Wiped the memory of", charName);
@@ -88,23 +98,20 @@ async function commandRemember(namedArgs, message_id) {
 
     if (charName.length == 0) return;
     if (messages_number == null)
-        // @ts-ignore
         return toastr.error("WARN: Id range provided for /presenceRemember is invalid");
 
     const char = characters.find((character) => character.name == charName)?.avatar;
 
     if (char === undefined)
-        // @ts-ignore
         return toastr.error("WARN: Character name provided for /presenceRemember doesn't exist within the character list");
 
+    /** @type {ChatMessageExtended[]} */
     const chat_messages = chat;
 
     if (typeof messages_number === "number") {
         if (isNaN(messages_number))
-            // @ts-ignore
             return toastr.error("WARN: message id provided for /presenceRemember is not a number");
         if (chat_messages[messages_number] === undefined)
-            // @ts-ignore
             return toastr.error("WARN: message id provided for /presenceRemember doesn't exist within the chat");
 
         if (!chat_messages[messages_number].present)
@@ -136,13 +143,16 @@ async function commandRememberAll(namedArgs, charName) {
 
     const char = characters.find((c) => c.name == charName).avatar;
 
-    const messages = chat;
-    const charMessages = chat.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => !m.present.includes(char));
+    /** @type {ChatMessageExtended[]} */
+    const chat_messages = chat;
+    const charMessages = chat_messages.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => !m.present.includes(char));
 
     for (const charMes of charMessages) {
         debug(charMes);
-        if (!messages[charMes.id].present) messages[charMes.id].present = [];
-        messages[charMes.id].present.push(char);
+
+        if (!chat_messages[charMes.id].present) chat_messages[charMes.id].present = [];
+
+        chat_messages[charMes.id].present.push(char);
     }
 
     log("Added all messages to the memory of ", charName);
@@ -193,18 +203,17 @@ async function commandCopy({ source_index = "", target_index = "" } = {}) {
     const sourceIndex = Number(source_index.trim());
     const targetIndex = Number(target_index.trim());
 
-    // @ts-ignore
     if (isNaN(sourceIndex)) return toastr.warning(t`source_index is not valid`);
-    // @ts-ignore
     if (isNaN(targetIndex)) return toastr.warning(t`target_index is not valid`);
     if (sourceIndex === targetIndex) return;
 
+    /** @type {ChatMessageExtended} */
     const sourceMess = chat[sourceIndex];
+
+    /** @type {ChatMessageExtended} */
     const targetMess = chat[targetIndex];
 
-    // @ts-ignore
     if (!chat[sourceIndex]) return toastr.warning(t`Source mess=#${sourceIndex} was not found`);
-    // @ts-ignore
     if (!chat[targetIndex]) return toastr.warning(t`Target mess=#${targetIndex} was not found`);
 
     targetMess.present = [...new Set([
@@ -223,24 +232,25 @@ async function commandCopy({ source_index = "", target_index = "" } = {}) {
 async function commandForceAllPresent(namedArgs, message_id) {
     if (!isActive()) return;
 
+    /** @type {ChatMessageExtended[]} */
+    const chat_messages = chat;
     const members = (await getCurrentParticipants()).members;
 
     if (message_id === undefined || message_id === "") {
-        for(const message of chat) message.present = members;
+        for(const message of chat_messages) message.present = members;
 
         saveChatDebounced();
         await addPresenceTrackerToMessages(true);
         return;
     }
 
-    const messages_number = String(message_id).trim().includes("-") ? stringToRange(message_id, 0, chat.length - 1) : Number(message_id);
+    const messages_number = String(message_id).trim().includes("-") ? stringToRange(message_id, 0, chat_messages.length - 1) : Number(message_id);
 
     if (typeof messages_number === "number") {
-        if (chat[messages_number] === undefined)
-            // @ts-ignore
+        if (chat_messages[messages_number] === undefined)
             return toastr.error("WARN: message id provided for /presenceForceAllPresent doesn't exist within the chat");
 
-        chat[messages_number].present = members;
+        chat_messages[messages_number].present = members;
 
         saveChatDebounced();
         await addPresenceTrackerToMessages(true);
@@ -248,7 +258,7 @@ async function commandForceAllPresent(namedArgs, message_id) {
     }
 
     for (let mes_id = messages_number.start; mes_id <= messages_number.end; mes_id++)
-        chat[mes_id].present = members;
+        chat_messages[mes_id].present = members;
 
     saveChatDebounced();
     await addPresenceTrackerToMessages(true);
@@ -257,8 +267,11 @@ async function commandForceAllPresent(namedArgs, message_id) {
 async function commandForceNonePresent(namedArgs, message_id) {
     if (!isActive()) return;
 
+    /** @type {ChatMessageExtended[]} */
+    const chat_messages = chat;
+
     if (message_id === undefined || message_id === "") {
-        for(const message of chat) message.present = [];
+        for(const message of chat_messages) message.present = [];
 
         saveChatDebounced();
         await addPresenceTrackerToMessages(true);
@@ -268,11 +281,10 @@ async function commandForceNonePresent(namedArgs, message_id) {
     const messages_number = String(message_id).trim().includes("-") ? stringToRange(message_id, 0, chat.length - 1) : Number(message_id);
 
     if (typeof messages_number === "number") {
-        if (chat[messages_number] === undefined)
-            // @ts-ignore
+        if (chat_messages[messages_number] === undefined)
             return toastr.error("WARN: message id provided for /presenceForceNonePresent doesn't exist within the chat");
 
-        chat[messages_number].present = [];
+        chat_messages[messages_number].present = [];
 
         saveChatDebounced();
         await addPresenceTrackerToMessages(true);
@@ -280,7 +292,7 @@ async function commandForceNonePresent(namedArgs, message_id) {
     }
 
     for (let mes_id = messages_number.start; mes_id <= messages_number.end; mes_id++)
-        chat[mes_id].present = [];
+        chat_messages[mes_id].present = [];
 
     saveChatDebounced();
     await addPresenceTrackerToMessages(true);
@@ -293,7 +305,6 @@ export function registerSlashCommands() {
             callback: async (args, value) => {
                 if (!value) {
                     warn("WARN: No message id or id range provided for /presenceForget");
-                    // @ts-ignore
                     toastr.error("WARN: No message id or id range provided for /presenceForget");
                     return;
                 }
@@ -373,7 +384,6 @@ export function registerSlashCommands() {
             callback: async (args, value) => {
                 if (!value) {
                     warn("WARN: No message id or id range provided for /presenceRemember");
-                    // @ts-ignore
                     toastr.error("WARN: No message id or id range provided for /presenceRemember");
                     return;
                 }
@@ -529,7 +539,6 @@ export function registerSlashCommands() {
         SlashCommand.fromProps({
             name: "presenceCopy",
             callback: async (args) => {
-                // @ts-ignore
                 await commandCopy(args);
                 return "";
             },
