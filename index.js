@@ -1,4 +1,4 @@
-import {characters, chat, chat_metadata, eventSource, event_types, saveChatDebounced, saveSettingsDebounced} from "../../../../script.js";
+import {characters, chat, chat_metadata, eventSource, event_types, saveChatDebounced, saveSettingsDebounced, this_chid} from "../../../../script.js";
 import {groups, is_group_generating, selected_group} from "../../../../scripts/group-chats.js";
 import {hideChatMessageRange} from "../../../chats.js";
 import {extension_settings} from "../../../extensions.js";
@@ -96,11 +96,22 @@ export async function getCurrentParticipants() {
 export async function onNewMessage(mesId) {
 	if (!isActive()) return;
 
+	/** @type {ChatMessageExtended} */
 	const mes = chat[mesId];
+    const participants = await getCurrentParticipants();
 
-	mes.present = [...(await getCurrentParticipants()).present];
+    if (this_chid !== undefined) {
+        const character = characters[this_chid];
+        const isCharActive = participants.present.includes(character.avatar);
+
+        if (isCharActive) mes.present = [...participants.present];
+        else mes.present = character?.avatar ? [character.avatar] : [];
+    } else {
+        mes.present = [...participants.present];
+    }
 
 	if(extensionSettings.seeLast && !mes.is_user) {
+		/** @type {ChatMessageExtended} */
 		const prevMes = chat[mesId - 1];
 
 		if(!prevMes.present) prevMes.present = [];
