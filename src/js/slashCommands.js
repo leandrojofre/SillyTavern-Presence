@@ -5,6 +5,19 @@ import { ARGUMENT_TYPE, SlashCommandArgument, SlashCommandNamedArgument } from "
 import { commonEnumProviders } from "../../../../../slash-commands/SlashCommandCommonEnumsProvider.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
 import { stringToRange } from "../../../../../utils.js";
+import { t } from "../../../../../i18n.js";
+
+// @ts-check
+
+/**
+ * @typedef {ChatMessage & { present?: string[] }} ChatMessageExtended
+ */
+
+/** @type {Function} */
+toastr.error
+
+/** @type {Function} */
+toastr.warning
 
 async function commandForget(namedArgs, message_id) {
     if (!isActive()) return;
@@ -16,23 +29,20 @@ async function commandForget(namedArgs, message_id) {
 
     if (charName.length == 0) return;
     if (messages_number == null)
-        // @ts-ignore
         return toastr.error("WARN: Id range provided for /presenceRemember is invalid");
 
     const char = characters.find((character) => character.name == charName)?.avatar;
 
     if (char === undefined)
-        // @ts-ignore
         return toastr.error("WARN: Character name provided for /presenceRemember doesn't exist within the character list");
 
+    /** @type {ChatMessageExtended[]} */
     const chat_messages = chat;
 
     if (typeof messages_number === "number") {
         if (isNaN(messages_number))
-            // @ts-ignore
             return toastr.error("WARN: message id provided for /presenceRemember is not a number");
         if (chat_messages[messages_number] === undefined)
-            // @ts-ignore
             return toastr.error("WARN: message id provided for /presenceRemember doesn't exist within the chat");
 
         if (!chat_messages[messages_number].present)
@@ -64,12 +74,13 @@ async function commandForgetAll(namedArgs, charName) {
 
     const char = characters.find((c) => c.name == charName).avatar;
 
-    const messages = chat;
-    const charMessages = chat.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => m.present.includes(char));
+    /** @type {ChatMessageExtended[]} */
+    const chat_messages = chat;
+    const charMessages = chat_messages.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => m.present.includes(char));
 
     for (const charMes of charMessages) {
         debug(charMes);
-        messages[charMes.id].present = charMes.present.filter((m) => m != char);
+        chat_messages[charMes.id].present = charMes.present.filter((m) => m != char);
     }
 
     log("Wiped the memory of", charName);
@@ -88,23 +99,20 @@ async function commandRemember(namedArgs, message_id) {
 
     if (charName.length == 0) return;
     if (messages_number == null)
-        // @ts-ignore
         return toastr.error("WARN: Id range provided for /presenceRemember is invalid");
 
     const char = characters.find((character) => character.name == charName)?.avatar;
 
     if (char === undefined)
-        // @ts-ignore
         return toastr.error("WARN: Character name provided for /presenceRemember doesn't exist within the character list");
 
+    /** @type {ChatMessageExtended[]} */
     const chat_messages = chat;
 
     if (typeof messages_number === "number") {
         if (isNaN(messages_number))
-            // @ts-ignore
             return toastr.error("WARN: message id provided for /presenceRemember is not a number");
         if (chat_messages[messages_number] === undefined)
-            // @ts-ignore
             return toastr.error("WARN: message id provided for /presenceRemember doesn't exist within the chat");
 
         if (!chat_messages[messages_number].present)
@@ -136,13 +144,16 @@ async function commandRememberAll(namedArgs, charName) {
 
     const char = characters.find((c) => c.name == charName).avatar;
 
-    const messages = chat;
-    const charMessages = chat.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => !m.present.includes(char));
+    /** @type {ChatMessageExtended[]} */
+    const chat_messages = chat;
+    const charMessages = chat_messages.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => !m.present.includes(char));
 
     for (const charMes of charMessages) {
         debug(charMes);
-        if (!messages[charMes.id].present) messages[charMes.id].present = [];
-        messages[charMes.id].present.push(char);
+
+        if (!chat_messages[charMes.id].present) chat_messages[charMes.id].present = [];
+
+        chat_messages[charMes.id].present.push(char);
     }
 
     log("Added all messages to the memory of ", charName);
@@ -151,13 +162,14 @@ async function commandRememberAll(namedArgs, charName) {
     await addPresenceTrackerToMessages(true);
 };
 
-async function commandReplace({ name = "", replace = "" } = {}) {
+async function commandReplace({ name = "", replace = "", forget = true } = {}, message_id) {
     if (!isActive()) return;
 
     const characterName = String(name).trim();
     const replaceName = String(replace).trim();
+    const doForget = String(forget).trim().toLowerCase() === "true";
+    const messages_number = String(message_id).trim().includes("-") ? stringToRange(message_id, 0, chat.length - 1) : Number(message_id);
 
-    // @ts-ignore
     if (characterName.length === 0 || replaceName.length === 0) return toastr.warning(t`Character name or replace not valid`);
 
     const sanitize = (str) => str.replace(/(\.\w+)$/i, "");
@@ -165,23 +177,52 @@ async function commandReplace({ name = "", replace = "" } = {}) {
     const replacer = characters.find((character) => character.name === replaceName)?.avatar;
 
     if (!character || !replacer) {
-        // @ts-ignore
         toastr.error("Character or replacer not found - check the console for more details");
         return warn("Character or replacer not found - ", "name=" + character, "replace=" + replacer);
     }
 
     log("/presenceReplace name='" + character + "' replace='" + replacer + "'", {name: name, replace: replace});
 
-    for (const mess of chat) {
+    /** @type {ChatMessageExtended[]} */
+    const chat_messages = chat;
+    let messages_to_process = [];
+
+    if (typeof messages_number === "number" && !isNaN(messages_number)) {
+        const mess = chat_messages[messages_number];
+
         if (!mess.present) mess.present = [];
 
-        mess.present = mess.present.map((ch_name) => {
-            if (sanitize(ch_name) === sanitize(character)) return replacer;
-            return ch_name;
-        });
+        const isPresent = mess.present.some((ch_name) => sanitize(ch_name) === sanitize(character));
+        const isReplacerPresent = mess.present.some((ch_name) => sanitize(ch_name) === sanitize(replacer));
+
+        if (isPresent && !isReplacerPresent) mess.present.push(replacer);
+        if (isPresent && doForget) mess.present = mess.present.filter((ch_name) => sanitize(ch_name) !== sanitize(character));
+
+        log(`Moved messages from ${characterName} to ${replaceName} (forget=${doForget})`);
+
+        saveChatDebounced();
+        await addPresenceTrackerToMessages(true);
+
+        return;
     }
 
-    log("Moved all messages in the memory of " + characterName + " into the memory of " + replaceName);
+    if (typeof messages_number === "object" && messages_number !== null)
+        messages_to_process = chat_messages.slice(messages_number.start, messages_number.end + 1);
+
+    if (messages_to_process.length === 0)
+        messages_to_process = chat_messages;
+
+    for (const mess of messages_to_process) {
+        if (!mess.present) mess.present = [];
+
+        const isPresent = mess.present.some((ch_name) => sanitize(ch_name) === sanitize(character));
+        const isReplacerPresent = mess.present.some((ch_name) => sanitize(ch_name) === sanitize(replacer));
+
+        if (isPresent && !isReplacerPresent) mess.present.push(replacer);
+        if (isPresent && doForget) mess.present = mess.present.filter((ch_name) => sanitize(ch_name) !== sanitize(character));
+    }
+
+    log(`Moved messages from ${characterName} to ${replaceName} (forget=${doForget})`);
 
     saveChatDebounced();
     await addPresenceTrackerToMessages(true);
@@ -193,18 +234,17 @@ async function commandCopy({ source_index = "", target_index = "" } = {}) {
     const sourceIndex = Number(source_index.trim());
     const targetIndex = Number(target_index.trim());
 
-    // @ts-ignore
     if (isNaN(sourceIndex)) return toastr.warning(t`source_index is not valid`);
-    // @ts-ignore
     if (isNaN(targetIndex)) return toastr.warning(t`target_index is not valid`);
     if (sourceIndex === targetIndex) return;
 
+    /** @type {ChatMessageExtended} */
     const sourceMess = chat[sourceIndex];
+
+    /** @type {ChatMessageExtended} */
     const targetMess = chat[targetIndex];
 
-    // @ts-ignore
     if (!chat[sourceIndex]) return toastr.warning(t`Source mess=#${sourceIndex} was not found`);
-    // @ts-ignore
     if (!chat[targetIndex]) return toastr.warning(t`Target mess=#${targetIndex} was not found`);
 
     targetMess.present = [...new Set([
@@ -223,24 +263,25 @@ async function commandCopy({ source_index = "", target_index = "" } = {}) {
 async function commandForceAllPresent(namedArgs, message_id) {
     if (!isActive()) return;
 
+    /** @type {ChatMessageExtended[]} */
+    const chat_messages = chat;
     const members = (await getCurrentParticipants()).members;
 
     if (message_id === undefined || message_id === "") {
-        for(const message of chat) message.present = members;
+        for(const message of chat_messages) message.present = members;
 
         saveChatDebounced();
         await addPresenceTrackerToMessages(true);
         return;
     }
 
-    const messages_number = String(message_id).trim().includes("-") ? stringToRange(message_id, 0, chat.length - 1) : Number(message_id);
+    const messages_number = String(message_id).trim().includes("-") ? stringToRange(message_id, 0, chat_messages.length - 1) : Number(message_id);
 
     if (typeof messages_number === "number") {
-        if (chat[messages_number] === undefined)
-            // @ts-ignore
+        if (chat_messages[messages_number] === undefined)
             return toastr.error("WARN: message id provided for /presenceForceAllPresent doesn't exist within the chat");
 
-        chat[messages_number].present = members;
+        chat_messages[messages_number].present = members;
 
         saveChatDebounced();
         await addPresenceTrackerToMessages(true);
@@ -248,7 +289,7 @@ async function commandForceAllPresent(namedArgs, message_id) {
     }
 
     for (let mes_id = messages_number.start; mes_id <= messages_number.end; mes_id++)
-        chat[mes_id].present = members;
+        chat_messages[mes_id].present = members;
 
     saveChatDebounced();
     await addPresenceTrackerToMessages(true);
@@ -257,8 +298,11 @@ async function commandForceAllPresent(namedArgs, message_id) {
 async function commandForceNonePresent(namedArgs, message_id) {
     if (!isActive()) return;
 
+    /** @type {ChatMessageExtended[]} */
+    const chat_messages = chat;
+
     if (message_id === undefined || message_id === "") {
-        for(const message of chat) message.present = [];
+        for(const message of chat_messages) message.present = [];
 
         saveChatDebounced();
         await addPresenceTrackerToMessages(true);
@@ -268,11 +312,10 @@ async function commandForceNonePresent(namedArgs, message_id) {
     const messages_number = String(message_id).trim().includes("-") ? stringToRange(message_id, 0, chat.length - 1) : Number(message_id);
 
     if (typeof messages_number === "number") {
-        if (chat[messages_number] === undefined)
-            // @ts-ignore
+        if (chat_messages[messages_number] === undefined)
             return toastr.error("WARN: message id provided for /presenceForceNonePresent doesn't exist within the chat");
 
-        chat[messages_number].present = [];
+        chat_messages[messages_number].present = [];
 
         saveChatDebounced();
         await addPresenceTrackerToMessages(true);
@@ -280,7 +323,7 @@ async function commandForceNonePresent(namedArgs, message_id) {
     }
 
     for (let mes_id = messages_number.start; mes_id <= messages_number.end; mes_id++)
-        chat[mes_id].present = [];
+        chat_messages[mes_id].present = [];
 
     saveChatDebounced();
     await addPresenceTrackerToMessages(true);
@@ -293,7 +336,6 @@ export function registerSlashCommands() {
             callback: async (args, value) => {
                 if (!value) {
                     warn("WARN: No message id or id range provided for /presenceForget");
-                    // @ts-ignore
                     toastr.error("WARN: No message id or id range provided for /presenceForget");
                     return;
                 }
@@ -373,7 +415,6 @@ export function registerSlashCommands() {
             callback: async (args, value) => {
                 if (!value) {
                     warn("WARN: No message id or id range provided for /presenceRemember");
-                    // @ts-ignore
                     toastr.error("WARN: No message id or id range provided for /presenceRemember");
                     return;
                 }
@@ -450,9 +491,8 @@ export function registerSlashCommands() {
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
             name: "presenceReplace",
-            callback: async (args) => {
-                // @ts-ignore
-                await commandReplace(args);
+            callback: async (/** @type {object} */args, value) => {
+                await commandReplace(args, value);
                 return "";
             },
             namedArgumentList: [
@@ -470,10 +510,25 @@ export function registerSlashCommands() {
                     isRequired: true,
                     enumProvider: commonEnumProviders.characters('character'),
                 }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'forget',
+                    description: 'Make the original character forget the messages (boolean) - true by default',
+                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    isRequired: false,
+                    enumProvider: commonEnumProviders.boolean(),
+                }),
+            ],
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: 'Message index or range (10-34) - If not provided, all messages will be processed',
+                    typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
+                    isRequired: false,
+                    enumProvider: commonEnumProviders.messages(),
+                }),
             ],
             helpString: `
             <div>
-                Transfers the messages from the memory of a character (forgets EVERYTHING) to another.
+                Transfers the messages from the memory of a character to another. Set <code>forget=false</code> to keep the original messages in the first character's memory.
             </div>
             <div>
                 <strong>Example:</strong>
@@ -481,55 +536,21 @@ export function registerSlashCommands() {
                     <li>
                         <pre><code>/presenceReplace name=Alice replace=Bob</code></pre>
                     </li>
+                    <li>
+                        <pre><code>/presenceReplace name=Alice replace=Bob forget=false</code></pre>
+                    </li>
+                    <li>
+                        <pre><code>/presenceReplace name=Alice replace=Bob forget=false 10-50</code></pre>
+                    </li>
                 </ul>
             </div>`,
         })
     );
 
-    // SlashCommandParser.addCommandObject(
-    // 	SlashCommand.fromProps({
-    // 		name: "presenceClone",
-    // 		callback: async (args) => {
-                // @ts-ignore
-    // 			await commandClone(args);
-    // 			return "";
-    // 		},
-    //         namedArgumentList: [
-    //             SlashCommandNamedArgument.fromProps({
-    //                 name: 'name',
-    //                 description: 'Character name - or unique character identifier (avatar key) with the memories to be cloned',
-    //                 typeList: [ARGUMENT_TYPE.STRING],
-    //                 isRequired: true,
-    //                 enumProvider: commonEnumProviders.characters('character'),
-    //             }),
-    //             SlashCommandNamedArgument.fromProps({
-    //                 name: 'clone',
-    //                 description: 'Character name - or unique character identifier (avatar key) of the one receiving the memmories',
-    //                 typeList: [ARGUMENT_TYPE.STRING],
-    //                 isRequired: true,
-    //                 enumProvider: commonEnumProviders.characters('character'),
-    //             }),
-    //         ],
-    // 		helpString: `
-    //         <div>
-    //             Clones the messages from the memory of a character (forgets EVERYTHING) to another.
-    //         </div>
-    //         <div>
-    //             <strong>Example:</strong>
-    //             <ul>
-    //                 <li>
-    //                     <pre><code>/presenceClone name=Alice clone=Bob</code></pre>
-    //                 </li>
-    //             </ul>
-    //         </div>`,
-    // 	})
-    // );
-
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
             name: "presenceCopy",
-            callback: async (args) => {
-                // @ts-ignore
+            callback: async (/** @type {object} */args) => {
                 await commandCopy(args);
                 return "";
             },

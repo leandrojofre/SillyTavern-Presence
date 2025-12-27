@@ -1,9 +1,15 @@
-import {characters, chat, chat_metadata, eventSource, event_types, saveChatDebounced, saveSettingsDebounced} from "../../../../script.js";
+import {characters, chat, chat_metadata, eventSource, event_types, saveChatDebounced, saveSettingsDebounced, this_chid} from "../../../../script.js";
 import {groups, is_group_generating, selected_group} from "../../../../scripts/group-chats.js";
 import {hideChatMessageRange} from "../../../chats.js";
 import {extension_settings} from "../../../extensions.js";
 import * as eventListeners from "./src/js/eventListeners.js";
 import * as slashCommands from "./src/js/slashCommands.js";
+
+// @ts-check
+
+/**
+ * @typedef {ChatMessage & { present?: string[], presence_manually_hidden?: boolean }} ChatMessageExtended
+ */
 
 const extensionName = "Presence";
 const extensionNameLong = `SillyTavern-${extensionName}`;
@@ -90,11 +96,22 @@ export async function getCurrentParticipants() {
 export async function onNewMessage(mesId) {
 	if (!isActive()) return;
 
+	/** @type {ChatMessageExtended} */
 	const mes = chat[mesId];
+    const participants = await getCurrentParticipants();
 
-	mes.present = [...(await getCurrentParticipants()).present];
+    if (this_chid !== undefined) {
+        const character = characters[this_chid];
+        const isCharActive = participants.present.includes(character.avatar);
+
+        if (isCharActive) mes.present = [...participants.present];
+        else mes.present = character?.avatar ? [character.avatar] : [];
+    } else {
+        mes.present = [...participants.present];
+    }
 
 	if(extensionSettings.seeLast && !mes.is_user) {
+		/** @type {ChatMessageExtended} */
 		const prevMes = chat[mesId - 1];
 
 		if(!prevMes.present) prevMes.present = [];
@@ -216,10 +233,37 @@ export async function onGenerationAfterCommands(type, config, dryRun) {
 }
 
 export async function toggleVisibilityAllMessages(state = true) {
-	hideChatMessageRange(0, chat.length - 1, state);
+	let current_chunk = 0;
+
+	/** @type {Array<{start?: number, end?: number}>} */
+	const message_id_chunks = [{}];
+
+	chat.forEach((/** @type {ChatMessageExtended} */mess, i) => {
+		const m = { id: i, presence_manually_hidden: mess.presence_manually_hidden ?? false };
+		const do_modify = !m.presence_manually_hidden;
+
+		if (!do_modify) return false;
+
+		if (message_id_chunks[current_chunk].start === undefined) {
+			message_id_chunks[current_chunk].start = m.id;
+			message_id_chunks[current_chunk].end = m.id;
+		} else if (message_id_chunks[current_chunk].end + 1 === m.id) {
+			message_id_chunks[current_chunk].end = m.id;
+		} else {
+			current_chunk++;
+			message_id_chunks.push({});
+			message_id_chunks[current_chunk].start = m.id;
+			message_id_chunks[current_chunk].end = m.id;
+		}
+	});
+
+	for (const id_chunk of message_id_chunks) {
+		hideChatMessageRange(id_chunk.start, id_chunk.end, state);
+	}
 }
 
 async function updateMessagePresence(mesId, member, isPresent) {
+	/** @type {ChatMessageExtended} */
 	const mes = chat[mesId];
 	if (!mes.present) mes.present = [];
 
@@ -250,13 +294,15 @@ async function onGroupMemberDrafted(type, charId) {
 		toggleVisibilityAllMessages(false);
 
         let current_chunk = 0;
+
+		/** @type {Array<{start?: number, end?: number}>} */
 		const message_id_chunks = [{}];
 
-        chat.forEach((mess, i) => {
+        chat.forEach((/** @type {ChatMessageExtended} */mess, i) => {
             const m = { id: i, present: mess.present ?? [] };
             const unhide = m.present.includes(char) || m.present.includes("presence_universal_tracker");
 
-            if (!unhide) return false;
+            if (!unhide || mess.presence_manually_hidden) return false;
 
             if (message_id_chunks[current_chunk].start === undefined) {
                 message_id_chunks[current_chunk].start = m.id;
@@ -300,6 +346,21 @@ async function togglePresenceTracking(e) {
 	updatePresenceTrackingButton(target);
 }
 
+function toggleMessagesManuallyHiddenFlag(e) {
+	if (!isActive()) return;
+
+	const $mess = $(e.target).closest(".mes");
+	const mesId = $mess.attr("mesid");
+	const isHiding = $(e.target).hasClass("mes_hide");
+
+	/** @type {ChatMessageExtended} */
+	const mes = chat[mesId];
+
+	mes.presence_manually_hidden = isHiding;
+
+	saveChatDebounced();
+}
+
 // * Initialize Extension
 
 function initExtensionSettings() {
@@ -327,12 +388,13 @@ async function updatePresenceTrackingButton(member) {
 }
 
 jQuery(async () => {
-	const groupMemberTemplateIcons = $(".group_member_icon");
+	const groupMemberTemplateIcons = $('.group_member_icon');
 	const ignorePresenceButton = $(`<div title="Ignore Presence" class="ignore_presence_toggle fa-solid fa-eye-slash right_menu_button fa-lg interactable" tabindex="0"></div>`);
 
-	groupMemberTemplateIcons.before(ignorePresenceButton);
+	groupMemberTemplateIcons.prepend(ignorePresenceButton);
 
-	$("#rm_group_members").on("click", ".ignore_presence_toggle", togglePresenceTracking);
+	$('#rm_group_members').on('click', '.ignore_presence_toggle', togglePresenceTracking);
+	$('#chat').on('click', '.mes_button.mes_hide, .mes_button.mes_unhide', toggleMessagesManuallyHiddenFlag);
 
 	const groupMemberList = document.getElementById("rm_group_members");
 	const observer = new MutationObserver((mutationList, observer) => {

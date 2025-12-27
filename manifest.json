@@ -6,7 +6,7 @@
     "js": "index.js",
     "css": "style.css",
     "author": "Lackyas, Kaldigo and Leandro",
-    "version": "3.1.1",
+    "version": "3.2.0",
     "homePage": "https://github.com/leandrojofre/SillyTavern-Presence.git",
     "auto_update": true
 }
