@@ -242,6 +242,8 @@ export async function toggleVisibilityAllMessages(state = true) {
 		const m = { id: i, presence_manually_hidden: mess.presence_manually_hidden ?? false };
 		const do_modify = !m.presence_manually_hidden;
 
+		if (!mess.is_system && mess.presence_manually_hidden) mess.presence_manually_hidden = false;
+
 		if (!do_modify) return false;
 
 		if (message_id_chunks[current_chunk].start === undefined) {
@@ -301,6 +303,8 @@ async function onGroupMemberDrafted(type, charId) {
         chat.forEach((/** @type {ChatMessageExtended} */mess, i) => {
             const m = { id: i, present: mess.present ?? [] };
             const unhide = m.present.includes(char) || m.present.includes("presence_universal_tracker");
+
+			if (!mess.is_system && mess.presence_manually_hidden) mess.presence_manually_hidden = false;
 
             if (!unhide || mess.presence_manually_hidden) return false;
 
