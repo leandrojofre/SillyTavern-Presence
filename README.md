@@ -41,10 +41,11 @@ Click this button and it lights up, that will indicate that this character can s
 - `/presenceForgetAll <char_name>` Wipes the memory of a character.
 - `/presenceRemember name=<char_name> <mes_index|mes_range>` Adds **some** messages to the memory of a character.
 - `/presenceRememberAll <char_name>` Adds **all** messages to the memory of a character.
-- `/presenceReplace name=<char_name> replace=<char_name> forget=<true|false> <mes_index|mes_range>` Transfer or clone the messages from the memory of a character to another. `forget` is `true` by default, set it to `false` to just clone memmories.
+- `/presenceReplace name=<char_name> replace=<char_name> forget=<true|false>? <mes_index|mes_range>?` Transfer or clone the messages from the memory of a character to another. `forget` is `true` by default, set it to `false` to just clone memmories.
 - `/presenceForceNonePresent <mes_index|mes_range>?` Makes **all** characters forget **everything**.
 - `/presenceForceAllPresent <mes_index|mes_range>?` Makes **all** characters remember **everything**.
 - `/presenceCopy source_index=<mes_index> target_index=<mes_index>` Copies the Tracker of a message and pastes it on another one - it does not replace the original tracker.
+- `/presenceLockHiddenMessages name=<char_name>? unlock=<true|false>? <mes_index|mes_range>?` Locks hidden messages in the chat. Locked messages won't be unhidden by the extension in future generations, unless they are unlocked or unhidden by the user.
 
 ## Thanks to Contributors
 - **cloak1505** for the update to the commands descriptions.

@@ -10,7 +10,7 @@ import { t } from "../../../../../i18n.js";
 // @ts-check
 
 /**
- * @typedef {ChatMessage & { present?: string[] }} ChatMessageExtended
+ * @typedef {ChatMessage & { present?: string[], presence_manually_hidden?: boolean }} ChatMessageExtended
  */
 
 /** @type {Function} */
@@ -29,21 +29,21 @@ async function commandForget(namedArgs, message_id) {
 
     if (charName.length == 0) return;
     if (messages_number == null)
-        return toastr.error("WARN: Id range provided for /presenceRemember is invalid");
+        return toastr.error("WARN: Id range provided for /presenceForget is invalid");
 
     const char = characters.find((character) => character.name == charName)?.avatar;
 
     if (char === undefined)
-        return toastr.error("WARN: Character name provided for /presenceRemember doesn't exist within the character list");
+        return toastr.error("WARN: Character name provided for /presenceForget doesn't exist within the character list");
 
     /** @type {ChatMessageExtended[]} */
     const chat_messages = chat;
 
     if (typeof messages_number === "number") {
         if (isNaN(messages_number))
-            return toastr.error("WARN: message id provided for /presenceRemember is not a number");
+            return toastr.error("WARN: message id provided for /presenceForget is not a number");
         if (chat_messages[messages_number] === undefined)
-            return toastr.error("WARN: message id provided for /presenceRemember doesn't exist within the chat");
+            return toastr.error("WARN: message id provided for /presenceForget doesn't exist within the chat");
 
         if (!chat_messages[messages_number].present)
             chat_messages[messages_number].present = [];
@@ -258,6 +258,46 @@ async function commandCopy({ source_index = "", target_index = "" } = {}) {
 
     saveChatDebounced();
     await addPresenceTrackerToMessages(true);
+};
+
+async function commandLockHiddenMessages({ name = "", unlock = false } = {}, message_id = "") {
+    if (!isActive()) return;
+
+    const messageID = String(message_id).trim();
+    const characterName = String(name).trim();
+    const doLock = String(unlock).trim().toLowerCase() !== "true";
+    const messagesNumber = messageID.includes("-") ? stringToRange(messageID, 0, chat.length - 1) : Number(messageID);
+
+    /** @type {ChatMessageExtended[]} */
+    const chat_messages = chat;
+    let messages_to_process = [];
+
+    if (typeof messagesNumber === "number" && !isNaN(messagesNumber)) {
+        const mess = chat_messages[messagesNumber];
+
+        if (characterName !== "" && mess.name !== characterName) return;
+        if (!mess.is_system) return;
+
+        mess.presence_manually_hidden = doLock;
+        saveChatDebounced();
+
+        return;
+    }
+
+    if (typeof messagesNumber === "object" && messagesNumber !== null)
+        messages_to_process = chat_messages.slice(messagesNumber.start, messagesNumber.end + 1);
+
+    if (messages_to_process.length === 0)
+        messages_to_process = chat_messages;
+
+    for (const mess of messages_to_process) {
+        if (characterName !== "" && mess.name !== characterName) continue;
+        if (!mess.is_system) continue;
+
+        mess.presence_manually_hidden = doLock;
+    }
+
+    saveChatDebounced();
 };
 
 async function commandForceAllPresent(namedArgs, message_id) {
@@ -579,6 +619,64 @@ export function registerSlashCommands() {
                 <ul>
                     <li>
                         <pre><code>/presenceCopy source_index=2 target_index=80</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "presenceLockHiddenMessages",
+            callback: async (/** @type {object} */args, /** @type {string} */value) => {
+                await commandLockHiddenMessages(args, value);
+                return "";
+            },
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'name',
+                    description: 'Character or Persona name - Filter messages by group member or persona',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    defaultValue: "",
+                    isRequired: false,
+                    enumProvider: commonEnumProviders.characters("all"),
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'unlock',
+                    description: 'If <code>true</code> it will unlock messages instead - <code>false</code> by default',
+                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    defaultValue: "false",
+                    isRequired: false,
+                    enumProvider: commonEnumProviders.boolean(),
+                }),
+            ],
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: 'Message index or range (10-34) - If not provided, all messages will be processed',
+                    typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
+                    defaultValue: "",
+                    isRequired: false,
+                    enumProvider: commonEnumProviders.messages(),
+                }),
+            ],
+            helpString: `
+            <div>
+                Lock hidden messages in the chat. Locked messages won't be unhidden by the extension in future generations unless the user unlocks them manually, or using this command with the parameter unlock set to <code>false</code>.
+            </div>
+            <div>
+                <strong>Example:</strong>
+                <ul>
+                    <li>
+                        <pre><code>/presenceLockHiddenMessages</code><small>- To lock all</small></pre>
+                    </li>
+                    <li>
+                        <pre><code>/presenceLockHiddenMessages name="Ada"</code><small>- To filter by name</small></pre>
+                    </li>
+                    <li>
+                        <pre><code>/presenceLockHiddenMessages 10-34</code><small>- To filter by a message range</small></pre>
+                    </li>
+                    <li>
+                        <pre><code>/presenceLockHiddenMessages unlock=true 10-34</code><small>- To unlock messages and allow the extension to unhide them</small></pre>
                     </li>
                 </ul>
             </div>`,
