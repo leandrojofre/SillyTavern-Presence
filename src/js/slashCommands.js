@@ -181,13 +181,13 @@ async function commandReplace({ name = "", replace = "", forget = true } = {}, m
         return warn("Character or replacer not found - ", "name=" + character, "replace=" + replacer);
     }
 
-    log("/presenceReplace name='" + character + "' replace='" + replacer + "'", {name: name, replace: replace});
+    log("/presenceReplace name='" + character + "' replace='" + replacer + "'", {name, replace, message_id});
 
     /** @type {ChatMessageExtended[]} */
     const chat_messages = chat;
     let messages_to_process = [];
 
-    if (typeof messages_number === "number" && !isNaN(messages_number)) {
+    if (typeof messages_number === "number" && message_id !== ''  && !isNaN(messages_number)) {
         const mess = chat_messages[messages_number];
 
         if (!mess.present) mess.present = [];
@@ -209,7 +209,7 @@ async function commandReplace({ name = "", replace = "", forget = true } = {}, m
     if (typeof messages_number === "object" && messages_number !== null)
         messages_to_process = chat_messages.slice(messages_number.start, messages_number.end + 1);
 
-    if (messages_to_process.length === 0)
+    if (messages_to_process.length < 1)
         messages_to_process = chat_messages;
 
     for (const mess of messages_to_process) {
@@ -222,7 +222,7 @@ async function commandReplace({ name = "", replace = "", forget = true } = {}, m
         if (isPresent && doForget) mess.present = mess.present.filter((ch_name) => sanitize(ch_name) !== sanitize(character));
     }
 
-    log(`Moved messages from ${characterName} to ${replaceName} (forget=${doForget})`);
+    log(`Moved messages from ${characterName} to ${replaceName} (forget=${doForget})`, {messages_to_process});
 
     saveChatDebounced();
     await addPresenceTrackerToMessages(true);
