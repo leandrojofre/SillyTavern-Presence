@@ -134,12 +134,9 @@ export async function addPresenceTrackerToMessages(refresh) {
         destroyElement(trackers);
 	}
 
+	if (!isActive()) return;
+
 	let selector = "#chat .mes:not(.smallSysMes,[has_presence_tracker=true])";
-
-	if (refresh) {
-        destroyElement("#chat .mes_presence_tracker");
-	}
-
     const elements = $(selector).toArray();
 
     for (const element of elements) {
@@ -233,6 +230,8 @@ export async function onGenerationAfterCommands(type, config, dryRun) {
 }
 
 export async function toggleVisibilityAllMessages(state = true) {
+	if (!isActive()) return;
+
 	let current_chunk = 0;
 
 	/** @type {Array<{start?: number, end?: number}>} */
@@ -351,8 +350,6 @@ async function togglePresenceTracking(e) {
 }
 
 function toggleMessagesManuallyHiddenFlag(e) {
-	if (!isActive()) return;
-
 	const $mess = $(e.target).closest(".mes");
 	const mesId = $mess.attr("mesid");
 	const isHiding = $(e.target).hasClass("mes_hide");
@@ -381,6 +378,8 @@ function initExtensionSettings() {
 }
 
 async function updatePresenceTrackingButton(member) {
+	if (!isActive()) return;
+
 	const target = member.find(".ignore_presence_toggle");
 	const charId = member.data("chid");
 
