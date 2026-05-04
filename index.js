@@ -82,6 +82,13 @@ function debug(...messages) {
 	if (extensionSettings.debug) console.debug(`[${extensionName} Debug]`, ...messages);
 }
 
+/**
+ * @param {...any} messages
+ */
+function error(...messages) {
+	if (extensionSettings.debug) console.error(`[${extensionName} Debug]`, ...messages);
+}
+
 // * MARK:Utility
 
 /** Destroys an element and all data associated with it
@@ -128,7 +135,7 @@ const HTML_TEMPLATES = {
                     HTML_TEMPLATES[fileName] = $(response);
                 })
                 .fail(function(jqXHR, textStatus, errorThrown) {
-                    ExtensionName.error({jqXHR, textStatus, errorThrown});
+                    error({jqXHR, textStatus, errorThrown});
                 });
         }
 
