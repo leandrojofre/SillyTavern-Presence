@@ -1,5 +1,5 @@
 
-name: Create Release
+name: Release
 
 on:
   pull_request:
@@ -60,7 +60,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pr=$(gh pr view ${{ github.event.pull_request.number }} --json title,author)
+          pr=$(gh pr view ${{ github.event.pull_request.number }} --json number,title,author)
+          echo "number=$(echo $pr | jq -r .number)" >> $GITHUB_OUTPUT
           echo "title=$(echo $pr | jq -r .title)" >> $GITHUB_OUTPUT
           echo "user=$(echo $pr | jq -r .author.login)" >> $GITHUB_OUTPUT
 
@@ -71,9 +72,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.determine_version.outputs.new_version }}
-          release_name: SillyTavern-Presence v${{ steps.determine_version.outputs.new_version }}
+          release_name: Presence v${{ steps.determine_version.outputs.new_version }}
           body: |
-           - **PR Title**: ${{ steps.pr_details.outputs.title }}
+           - **PR Title**: [#${{ steps.pr_details.outputs.number }}] ${{ steps.pr_details.outputs.title }}
            - **Created by**: @${{ steps.pr_details.outputs.user }}
           draft: false
           prerelease: false
