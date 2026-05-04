@@ -22,6 +22,7 @@ export {
 /** @typedef {Presence.ChatMessageExtended} ChatMessageExtended */
 /** @typedef {Presence.ExtensionSettings} ExtensionSettings */
 /** @typedef {Presence.MessageIdChunk} MessageIdChunk */
+/** @typedef {Presence.HTMLTemplateGetOptions} HTMLTemplateGetOptions */
 
 const context = SillyTavern.getContext;
 
@@ -82,6 +83,13 @@ function debug(...messages) {
 	if (extensionSettings.debug) console.debug(`[${extensionName} Debug]`, ...messages);
 }
 
+/**
+ * @param {...any} messages
+ */
+function error(...messages) {
+	if (extensionSettings.debug) console.error(`[${extensionName} Debug]`, ...messages);
+}
+
 // * MARK:Utility
 
 /** Destroys an element and all data associated with it
@@ -114,9 +122,6 @@ function destroyElement(element) {
 
 const HTML_TEMPLATES = {
 	/**
-     * @typedef {Object} HTMLTemplateGetOptions
-     * @property {boolean} [clone]
-     *
      * @param {string} [fileName]
      * @param {HTMLTemplateGetOptions} [options]
      * @returns {Promise<JQuery<HTMLElement>>}
@@ -128,7 +133,7 @@ const HTML_TEMPLATES = {
                     HTML_TEMPLATES[fileName] = $(response);
                 })
                 .fail(function(jqXHR, textStatus, errorThrown) {
-                    ExtensionName.error({jqXHR, textStatus, errorThrown});
+                    error({jqXHR, textStatus, errorThrown});
                 });
         }
 
@@ -139,9 +144,7 @@ const HTML_TEMPLATES = {
             return $();
         }
 
-		return clone ?
-            $file.clone() :
-            $file;
+		return clone ? $file.clone() : $file;
     }
 };
 
