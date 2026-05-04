@@ -127,14 +127,31 @@ const HTML_TEMPLATES = {
      * @returns {Promise<JQuery<HTMLElement>>}
      */
     get: async function(fileName = 'settings', {clone = false} = {}) {
+		const extensionFolderPath = HTML_TEMPLATES.extensionFolderPath;
+
 		if (!HTML_TEMPLATES[fileName]) {
-            await $.get(`${extensionFolderPath}/src/html/${fileName}.html`)
-                .done(function(response) {
-                    HTML_TEMPLATES[fileName] = $(response);
-                })
-                .fail(function(jqXHR, textStatus, errorThrown) {
-                    error({jqXHR, textStatus, errorThrown});
-                });
+			try {
+				await $.get(`${extensionFolderPath}/src/html/${fileName}.html`)
+					.done(function(response) {
+						HTML_TEMPLATES[fileName] = $(response);
+					})
+			} catch (err) {
+				const is404 = err?.status === 404;
+
+				error({err});
+
+				if (is404 && !HTML_TEMPLATES.didFallbackFetch) {
+					HTML_TEMPLATES.extensionFolderPath = `${HTML_TEMPLATES.extensionFolderPath}.git`;
+					HTML_TEMPLATES.didFallbackFetch = true;
+
+					error(`Failed to fetch ${fileName}.html, attempting fallback path...`, {err, HTML_TEMPLATES: structuredClone({
+						extensionFolderPath: HTML_TEMPLATES.extensionFolderPath,
+						didFallbackFetch: HTML_TEMPLATES.didFallbackFetch,
+					})});
+
+					return HTML_TEMPLATES.get(fileName, {clone});
+				}
+			}
         }
 
         const $file = HTML_TEMPLATES[fileName];
@@ -145,7 +162,9 @@ const HTML_TEMPLATES = {
         }
 
 		return clone ? $file.clone() : $file;
-    }
+    },
+	didFallbackFetch: false,
+	extensionFolderPath,
 };
 
 function isActive() {
