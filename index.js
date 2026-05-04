@@ -138,7 +138,7 @@ const HTML_TEMPLATES = {
 			} catch (err) {
 				const is404 = err?.status === 404;
 
-				error({err});
+				error('Template rendering error.', {err});
 
 				if (is404 && !HTML_TEMPLATES.didFallbackFetch) {
 					HTML_TEMPLATES.extensionFolderPath = `${HTML_TEMPLATES.extensionFolderPath}.git`;
