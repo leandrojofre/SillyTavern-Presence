@@ -47,8 +47,15 @@ Click this button and it lights up, that will indicate that this character can s
 - `/presenceCopy source_index=<mes_index> target_index=<mes_index>` Copies the Tracker of a message and pastes it on another one - it does not replace the original tracker.
 - `/presenceLockHiddenMessages name=<char_name>? unlock=<true|false>? <mes_index|mes_range>?` Locks hidden messages in the chat. Locked messages won't be unhidden by the extension in future generations, unless they are unlocked or unhidden by the user.
 
-## Thanks to Contributors
-- **cloak1505** for the update to the commands descriptions.
-
 ## TODO
 - Include Universal Tracker in the commands.
+
+### Support and Contributions
+Feel free to submit a PR with the feature you want! Make sure to read the **Contribution Rules**. As long as you follow them, any change you update will be accepted (if it's reasonable).
+Thanks to:
+- **cloak1505** for the update to the commands descriptions.
+
+### Contribution Rules
+- Always PR against the `dev` branch.
+- Use the `dev` branch as the source of you working branch. If you create a new branch to work on your feature, make sure you use the `dev` branch as the source of the new branch.
+- Nothing else really, enjoy.
