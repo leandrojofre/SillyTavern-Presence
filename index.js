@@ -149,7 +149,7 @@ const HTML_TEMPLATES = {
 						didFallbackFetch: HTML_TEMPLATES.didFallbackFetch,
 					})});
 
-					return HTML_TEMPLATES.get(fileName, {clone});
+					return await HTML_TEMPLATES.get(fileName, {clone});
 				}
 			}
         }
