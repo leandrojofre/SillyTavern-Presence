@@ -19,4 +19,8 @@ declare namespace Presence {
         start?: number;
         end?: number;
     };
+
+    type HTMLTemplateGetOptions = {
+        clone?: boolean;
+    };
 };

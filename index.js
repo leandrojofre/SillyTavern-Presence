@@ -22,6 +22,7 @@ export {
 /** @typedef {Presence.ChatMessageExtended} ChatMessageExtended */
 /** @typedef {Presence.ExtensionSettings} ExtensionSettings */
 /** @typedef {Presence.MessageIdChunk} MessageIdChunk */
+/** @typedef {Presence.HTMLTemplateGetOptions} HTMLTemplateGetOptions */
 
 const context = SillyTavern.getContext;
 
@@ -121,9 +122,6 @@ function destroyElement(element) {
 
 const HTML_TEMPLATES = {
 	/**
-     * @typedef {Object} HTMLTemplateGetOptions
-     * @property {boolean} [clone]
-     *
      * @param {string} [fileName]
      * @param {HTMLTemplateGetOptions} [options]
      * @returns {Promise<JQuery<HTMLElement>>}
@@ -146,9 +144,7 @@ const HTML_TEMPLATES = {
             return $();
         }
 
-		return clone ?
-            $file.clone() :
-            $file;
+		return clone ? $file.clone() : $file;
     }
 };
 
