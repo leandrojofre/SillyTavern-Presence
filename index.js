@@ -127,14 +127,31 @@ const HTML_TEMPLATES = {
      * @returns {Promise<JQuery<HTMLElement>>}
      */
     get: async function(fileName = 'settings', {clone = false} = {}) {
+		const extensionFolderPath = HTML_TEMPLATES.extensionFolderPath;
+
 		if (!HTML_TEMPLATES[fileName]) {
-            await $.get(`${extensionFolderPath}/src/html/${fileName}.html`)
-                .done(function(response) {
-                    HTML_TEMPLATES[fileName] = $(response);
-                })
-                .fail(function(jqXHR, textStatus, errorThrown) {
-                    error({jqXHR, textStatus, errorThrown});
-                });
+			try {
+				await $.get(`${extensionFolderPath}/src/html/${fileName}.html`)
+					.done(function(response) {
+						HTML_TEMPLATES[fileName] = $(response);
+					})
+			} catch (err) {
+				const is404 = err?.status === 404;
+
+				error('Template rendering error.', {err});
+
+				if (is404 && !HTML_TEMPLATES.didFallbackFetch) {
+					HTML_TEMPLATES.extensionFolderPath = `${HTML_TEMPLATES.extensionFolderPath}.git`;
+					HTML_TEMPLATES.didFallbackFetch = true;
+
+					error(`Failed to fetch ${fileName}.html, attempting fallback path...`, {err, HTML_TEMPLATES: structuredClone({
+						extensionFolderPath: HTML_TEMPLATES.extensionFolderPath,
+						didFallbackFetch: HTML_TEMPLATES.didFallbackFetch,
+					})});
+
+					return await HTML_TEMPLATES.get(fileName, {clone});
+				}
+			}
         }
 
         const $file = HTML_TEMPLATES[fileName];
@@ -145,7 +162,9 @@ const HTML_TEMPLATES = {
         }
 
 		return clone ? $file.clone() : $file;
-    }
+    },
+	didFallbackFetch: false,
+	extensionFolderPath,
 };
 
 function isActive() {
@@ -388,13 +407,13 @@ function getMessageIdChunks(avatar = null) {
 }
 
 /**
- * Mark a range of messages as hidden ("is_system") or not.
+ * Mark a range of messages as hidden `is_system=true` or not.
  * @param {MessageIdChunk} idChunk An object with "start" and "end" properties indicating the range of message IDs to hide/unhide.
  * @param {boolean} unhide If true, unhide the messages instead.
  * @param {boolean} [saveChat] Whether to save the chat after toggling message visibility.
  * @returns {Promise<void>}
  */
-export async function hideChatMessageRange(idChunk, unhide, saveChat = true) {
+export function hideChatMessageRange(idChunk, unhide, saveChat = true) {
 	let { start, end } = idChunk;
 
 	if (isNaN(start)) return;
@@ -421,7 +440,12 @@ export async function hideChatMessageRange(idChunk, unhide, saveChat = true) {
 	if (saveChat) saveChatDebounced();
 }
 
-export async function toggleVisibilityAllMessages(unhide = false, saveChat = true) {
+/**
+ * @param {boolean} unhide
+ * @param {boolean} saveChat
+ * @returns {void}
+ */
+export function toggleVisibilityAllMessages(unhide = false, saveChat = true) {
 	if (!isActive()) return;
 
 	const messageIdChunks = getMessageIdChunks();
@@ -432,7 +456,12 @@ export async function toggleVisibilityAllMessages(unhide = false, saveChat = tru
 	}
 }
 
-async function updateMessagePresence(mesId, member, isPresent) {
+/**
+ * @param {number|string} mesId
+ * @param {string} member
+ * @param {boolean} isPresent
+ */
+function updateMessagePresence(mesId, member, isPresent) {
 	/** @type {ChatMessageExtended} */
 	const mes = context().chat[mesId];
 	if (!mes.present) mes.present = [];
@@ -447,6 +476,11 @@ async function updateMessagePresence(mesId, member, isPresent) {
 	saveChatDebounced();
 }
 
+/**
+ * @param {string} type Generation type
+ * @param {number|string} charId
+ * @returns {viod}
+ */
 function onGroupMemberDrafted(type, charId) {
 	if (!isActive()) return;
 
@@ -458,7 +492,7 @@ function onGroupMemberDrafted(type, charId) {
 	const avatar = characters[charId].avatar || null;
 
 	if (
-		type == "impersonate" ||
+		type == 'impersonate' ||
 		isUserContinue ||
 		chatMetadata.ignore_presence?.includes(avatar)
 	) {
