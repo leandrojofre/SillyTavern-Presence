@@ -383,7 +383,6 @@ function getMessageIdChunks(avatar = null) {
 	let current_chunk = 0;
 
 	for (const [mesId, mess] of chat.entries()) {
-		console.log({mesId, mess, avatar, canToggle: canToggleHideMessage(mess, {avatar})});
 		if (!canToggleHideMessage(mess, {avatar})) continue;
 
 		const chunk = messageIdChunks[current_chunk];
