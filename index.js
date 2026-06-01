@@ -478,7 +478,7 @@ function updateMessagePresence(mesId, member, isPresent) {
 /**
  * @param {string} type Generation type
  * @param {number|string} charId
- * @returns {viod}
+ * @returns {void}
  */
 function onGroupMemberDrafted(type, charId) {
 	if (!isActive()) return;
