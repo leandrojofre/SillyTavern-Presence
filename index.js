@@ -565,6 +565,7 @@ globalThis.Presence = {
 	toggleVisibilityAllMessages,
 	hideChatMessageRange,
 	getMessageIdChunks,
+	extensionName,
 };
 
 // * MARK:Extension Settings
