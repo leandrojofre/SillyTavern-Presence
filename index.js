@@ -383,7 +383,6 @@ function getMessageIdChunks(avatar = null) {
 	let current_chunk = 0;
 
 	for (const [mesId, mess] of chat.entries()) {
-		console.log({mesId, mess, avatar, canToggle: canToggleHideMessage(mess, {avatar})});
 		if (!canToggleHideMessage(mess, {avatar})) continue;
 
 		const chunk = messageIdChunks[current_chunk];
@@ -479,7 +478,7 @@ function updateMessagePresence(mesId, member, isPresent) {
 /**
  * @param {string} type Generation type
  * @param {number|string} charId
- * @returns {viod}
+ * @returns {void}
  */
 function onGroupMemberDrafted(type, charId) {
 	if (!isActive()) return;
@@ -566,6 +565,7 @@ globalThis.Presence = {
 	toggleVisibilityAllMessages,
 	hideChatMessageRange,
 	getMessageIdChunks,
+	extensionName,
 };
 
 // * MARK:Extension Settings
