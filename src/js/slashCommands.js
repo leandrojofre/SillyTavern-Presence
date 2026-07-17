@@ -122,44 +122,44 @@ async function commandRemember(namedArgs, message_id) {
 
     const {chat} = context();
     const {name: charName} = namedArgs;
-    const messages_number = String(message_id).trim().includes("-") ? stringToRange(message_id, 0, chat.length - 1) : Number(message_id);
+    const messageRange = stringToRange(message_id, 0, chat.length - 1);
 
     log(`/presenceForgetAll name="${charName}" ${message_id}`);
 
     if (charName.length == 0) return;
-    if (messages_number == null) return toastr.error(`ID range provided for /presenceRemember is invalid`, Presence.extensionName);
+    if (messageRange == null) return toastr.error(`ID range provided for /presenceRemember is invalid`, Presence.extensionName);
 
     const char = findCharacter(charName)?.avatar;
 
     if (!char) return toastr.error(`Character name provided for /presenceRemember doesn't exist within the character list`, Presence.extensionName);
 
-    /** @type {ChatMessageExtended[]} */
-    const chat_messages = chat;
+    if (messageRange.start === messageRange.end) {
+        const messageId = messageRange.start;
 
-    if (typeof messages_number === 'number') {
-        if (isNaN(messages_number))
+        if (isNaN(messageId))
             return toastr.error(`Message ID provided for /presenceRemember is not a number`, Presence.extensionName);
-        if (chat_messages[messages_number] === undefined)
+        if (chat[messageId] === undefined)
             return toastr.error(`Message ID provided for /presenceRemember doesn't exist within the chat`, Presence.extensionName);
 
-        if (!chat_messages[messages_number].present)
-            chat_messages[messages_number].present = [];
+        if (!chat[messageId].present)
+            chat[messageId].present = [];
 
-        chat_messages[messages_number].present.push(char);
+        chat[messageId].present.push(char);
 
-        log(`Added message with ID=${messages_number} to the memory of ${charName}`);
+        log(`Added message with ID=${messageId} to the memory of ${charName}`);
         saveChatDebounced();
         await addPresenceTrackerToMessages(true);
         return;
     }
 
-    for (let mes_id = messages_number.start; mes_id <= messages_number.end; mes_id++) {
-        debug(mes_id);
-        if (!chat_messages[mes_id].present) chat_messages[mes_id].present = [];
-        chat_messages[mes_id].present.push(char);
+    for (let messageId = messageRange.start; messageId <= messageRange.end; messageId++) {
+        if (!chat[messageId].present)
+            chat[messageId].present = [];
+
+        chat[messageId].present.push(char);
     }
 
-    log(`Added all messages in the range=${messages_number.start}-${messages_number.end} to the memory of ${charName}`);
+    log(`Added all messages in the range=${messageRange.start}-${messageRange.end} to the memory of ${charName}`);
 
     saveChatDebounced();
     await addPresenceTrackerToMessages(true);
