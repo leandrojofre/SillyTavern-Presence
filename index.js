@@ -198,19 +198,18 @@ function getCurrentParticipants() {
 export async function onNewMessage(mesId) {
 	if (!isActive()) return;
 
-	/** @type {ChatMessageExtended[]} */
 	const chat = context().chat;
 	const mes = chat[mesId];
     const participants = await getCurrentParticipants();
-	const { this_chid, characters } = context();
+	const { characterId: charId, characters } = context();
 
 	const thumbnail = new URL(mes.force_avatar, window.location.origin);
 	const urlType = thumbnail?.searchParams?.get('type') ?? '';
 	const urlFile = thumbnail?.searchParams?.get('file') ?? '';
 	const isUser = urlType === 'persona';
 
-    if (this_chid !== undefined && !isUser && urlFile) {
-        const character = characters[this_chid];
+    if (charId !== undefined && !isUser && urlFile) {
+        const character = characters[charId];
 		const isCharMessage = urlFile === character.avatar || mes.original_avatar === character.avatar;
 	    const isCharActive = participants.present.includes(character.avatar);
 
@@ -221,7 +220,6 @@ export async function onNewMessage(mesId) {
     }
 
 	if(extensionSettings.seeLast && !mes.is_user) {
-		/** @type {ChatMessageExtended} */
 		const prevMes = chat[mesId - 1];
 
 		if(!prevMes.present) prevMes.present = [];
