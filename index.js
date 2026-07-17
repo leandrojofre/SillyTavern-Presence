@@ -678,11 +678,11 @@ async function loadSettingsMenu() {
 // * MARK:Initialization
 
 async function initializeFeatures() {
-    const universalTrackerAlwaysOn = await HTML_TEMPLATES.get('universalTrackerButton');
+    const universalTrackerToggle = await HTML_TEMPLATES.get('universalTrackerToggle');
 	const universalTrackerContainer = $('#GroupFavDelOkBack div:has(#rm_group_automode_label)');
 
-	universalTrackerContainer.append(universalTrackerAlwaysOn);
-    universalTrackerAlwaysOn.on("change", (e) => {
+	universalTrackerContainer.append(universalTrackerToggle);
+    universalTrackerToggle.on("change", (e) => {
 		context().chatMetadata[MetadataMap.universalTrackerOn] = $(e.target).prop("checked");
 		saveMetadataDebounced();
 	});
