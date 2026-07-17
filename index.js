@@ -19,11 +19,13 @@ export {
 
 // @ts-check
 
+/** @typedef {Presence.SillyTavernContext} SillyTavernContext */
 /** @typedef {Presence.ChatMessageExtended} ChatMessageExtended */
 /** @typedef {Presence.ExtensionSettings} ExtensionSettings */
 /** @typedef {Presence.MessageIdChunk} MessageIdChunk */
 /** @typedef {Presence.HTMLTemplateGetOptions} HTMLTemplateGetOptions */
 
+/** @type {() => SillyTavernContext} */
 const context = SillyTavern.getContext;
 
 const {
@@ -371,7 +373,6 @@ function canToggleHideMessage(message, {avatar = null} = {}) {
  * @returns {MessageIdChunk[]} An array of message ID ranges that can be hidden by Presence.
  */
 function getMessageIdChunks(avatar = null) {
-	/** @type {ChatMessageExtended[]} */
 	const chat = context().chat;
 
 	if (!chat || !chat.length) return [];
@@ -459,8 +460,9 @@ export function toggleVisibilityAllMessages(unhide = false, saveChat = true) {
  * @param {boolean} isPresent
  */
 function updateMessagePresence(mesId, member, isPresent) {
-	/** @type {ChatMessageExtended} */
-	const mes = context().chat[mesId];
+	const { chat } = context();
+	const mes = chat.at(Number(mesId));
+
 	if (!mes.present) mes.present = [];
 
 	if (isPresent) {
@@ -483,7 +485,6 @@ function onGroupMemberDrafted(type, charId) {
 
 	const { chat, characters, chatMetadata } = context();
 
-	/** @type {ChatMessageExtended} */
 	const lastMessage = chat[chat.length - 1];
 	const isUserContinue = (type === "continue" && lastMessage.is_user);
 	const avatar = characters[charId].avatar || null;
@@ -532,12 +533,12 @@ async function togglePresenceTracking(e) {
 }
 
 function toggleMessagesManuallyHiddenFlag(e) {
+	const { chat } = context();
 	const $mess = $(e.target).closest(".mes");
 	const mesId = $mess.attr("mesid");
 	const isHiding = $(e.target).hasClass("mes_hide");
 
-	/** @type {ChatMessageExtended} */
-	const mes = context().chat[mesId];
+	const mes = chat.at(Number(mesId));
 
 	mes.presence_manually_hidden = isHiding;
 

@@ -1,4 +1,13 @@
 declare namespace Presence {
+    interface ChatMessageExtended extends ChatMessage {
+        present?: string[];
+        presence_manually_hidden?: boolean;
+    };
+
+    interface SillyTavernContext extends ReturnType<typeof SillyTavern.getContext> {
+        chat: ChatMessageExtended[];
+    };
+
     type UILocationOption = 'top' | 'bottom';
 
     type ExtensionSettings = {
@@ -8,11 +17,6 @@ declare namespace Presence {
         includeMuted: boolean;
         disableTransition: boolean;
         debug: boolean;
-    };
-
-    type ChatMessageExtended = ChatMessage & {
-        present?: string[];
-        presence_manually_hidden?: boolean;
     };
 
     type MessageIdChunk = {
