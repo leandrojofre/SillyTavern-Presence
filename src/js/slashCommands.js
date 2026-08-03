@@ -8,10 +8,10 @@ import {
     isActive,
     saveChatDebounced,
     t,
-} from "../../index.js";
+} from '../../index.js';
 
-import { commonEnumProviders } from "../../../../../slash-commands/SlashCommandCommonEnumsProvider.js";
-import { stringToRange } from "../../../../../utils.js";
+import { commonEnumProviders } from '../../../../../slash-commands/SlashCommandCommonEnumsProvider.js';
+import { stringToRange } from '../../../../../utils.js';
 
 // * MARK:Methods
 
@@ -63,12 +63,11 @@ async function commandForget(namedArgs, message_id) {
     if (messageRange.start === messageRange.end) {
         if (isNaN(messageId))
             return toastr.error(`Message ID provided for /presenceForget is not a number`, Presence.extensionName);
+
         if (chat_messages[messageId] === undefined)
             return toastr.error(`Message ID provided for /presenceForget doesn't exist within the chat`, Presence.extensionName);
 
-        if (!chat_messages[messageId].present)
-            chat_messages[messageId].present = [];
-
+        chat_messages[messageId].present = chat_messages[messageId].present || [];
         chat_messages[messageId].present = chat_messages[messageId].present.filter((group_member) => group_member != char);
 
         log(`Removed message with id=${messageId} from the memory of ${charName}`);
@@ -78,8 +77,7 @@ async function commandForget(namedArgs, message_id) {
     }
 
     for (let messageId = messageRange.start; messageId <= messageRange.end; messageId++) {
-        debug(messageId);
-        if (!chat_messages[messageId].present) chat_messages[messageId].present = [];
+        chat_messages[messageId].present = chat_messages[messageId].present || [];
         chat_messages[messageId].present = chat_messages[messageId].present.filter((group_member) => group_member != char);
     }
 
@@ -98,14 +96,15 @@ async function commandForgetAll(namedArgs, charName) {
 
     if (!char) return toastr.error(`Character name provided for /presenceForget doesn't exist within the character list`, Presence.extensionName);
 
-    const charMessages = chat_messages.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => m.present.includes(char));
+    const charMessages = chat_messages
+        .map((m, i) => ({ id: i, present: m.present || [] }))
+        .filter((m) => m.present.includes(char));
 
     for (const charMes of charMessages) {
-        debug(charMes);
         chat_messages[charMes.id].present = charMes.present.filter((m) => m != char);
     }
 
-    log("Wiped the memory of", charName);
+    log(`Wiped the memory of ${charName}`);
 
     saveChatDebounced();
     await addPresenceTrackerToMessages(true);
@@ -132,12 +131,11 @@ async function commandRemember(namedArgs, message_id) {
 
         if (isNaN(messageId))
             return toastr.error(`Message ID provided for /presenceRemember is not a number`, Presence.extensionName);
+
         if (chat[messageId] === undefined)
             return toastr.error(`Message ID provided for /presenceRemember doesn't exist within the chat`, Presence.extensionName);
 
-        if (!chat[messageId].present)
-            chat[messageId].present = [];
-
+        chat[messageId].present = chat[messageId].present || [];
         chat[messageId].present.push(char);
 
         log(`Added message with ID=${messageId} to the memory of ${charName}`);
@@ -147,9 +145,7 @@ async function commandRemember(namedArgs, message_id) {
     }
 
     for (let messageId = messageRange.start; messageId <= messageRange.end; messageId++) {
-        if (!chat[messageId].present)
-            chat[messageId].present = [];
-
+        chat[messageId].present = chat[messageId].present || [];
         chat[messageId].present.push(char);
     }
 
@@ -171,10 +167,7 @@ async function commandRememberAll(namedArgs, charName) {
     const charMessages = chat_messages.map((m, i) => ({ id: i, present: m.present ?? [] })).filter((m) => !m.present.includes(char));
 
     for (const charMes of charMessages) {
-        debug(charMes);
-
-        if (!chat_messages[charMes.id].present) chat_messages[charMes.id].present = [];
-
+        chat_messages[charMes.id].present = chat_messages[charMes.id].present || [];
         chat_messages[charMes.id].present.push(char);
     }
 
@@ -214,8 +207,7 @@ async function commandReplace({ name = '', replace = '', forget = true, forceNam
 
     if (messageRange.start === messageRange.end) {
         const mess = chat_messages[messageId];
-
-        if (!mess.present) mess.present = [];
+        mess.present = mess.present || [];
 
         const isPresent = mess.present.some((ch_name) => matchCharacter(character, ch_name));
         const isReplacerPresent = mess.present.some((ch_name) => ch_name === replacer);
@@ -235,7 +227,7 @@ async function commandReplace({ name = '', replace = '', forget = true, forceNam
         messagesToProcess = chat_messages;
 
     for (const mess of messagesToProcess) {
-        if (!mess.present) mess.present = [];
+        mess.present = mess.present || [];
 
         const isPresent = mess.present.some((ch_name) => matchCharacter(character, ch_name));
         const isReplacerPresent = mess.present.some((ch_name) => ch_name === replacer);
@@ -330,7 +322,7 @@ async function commandForceAllPresent(namedArgs, message_id) {
         return toastr.warning(t`ID range provided for /presenceForceAllPresent is invalid`, Presence.extensionName);
 
     if (messageId !== 0 && !messageId) {
-        for(const message of chat_messages) message.present.push(...members);
+        for(const message of chat_messages) message?.present?.push(...members);
 
         saveChatDebounced();
         await addPresenceTrackerToMessages(true);
@@ -341,7 +333,7 @@ async function commandForceAllPresent(namedArgs, message_id) {
         if (chat_messages[messageId] === undefined)
             return toastr.error(`Message ID provided for /presenceForceAllPresent doesn't exist within the chat`, Presence.extensionName);
 
-        chat_messages[messageId].present.push(...members);
+        chat_messages[messageId]?.present?.push(...members);
 
         saveChatDebounced();
         await addPresenceTrackerToMessages(true);
@@ -349,7 +341,7 @@ async function commandForceAllPresent(namedArgs, message_id) {
     }
 
     for (let messageId = messageRange.start; messageId <= messageRange.end; messageId++) {
-        chat_messages[messageId].present.push(...members);
+        chat_messages[messageId]?.present?.push(...members);
     }
 
     saveChatDebounced();
