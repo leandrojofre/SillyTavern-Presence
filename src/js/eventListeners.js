@@ -126,7 +126,6 @@ function initialize() {
         if (!chatId) return;
 
         onChatChanged({forceUpdate: true});
-        updateMemberListButton();
     });
 
     eventSource.on(eventTypes.CHARACTER_MESSAGE_RENDERED, async function (...args) {

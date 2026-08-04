@@ -223,10 +223,10 @@ function getCurrentParticipants() {
 	if (!group) return { members: [], present: [] };
 
 	let active = [...group.members];
-    const statuses = Presence.ext('StatUsMaximus').call('getStatuses') || [];
+    const statuses = Presence.ext('StatUsMaximus').getAvatarMap();
 
-    for (const s of statuses) {
-        if (s.enabled) active.push(s.avatar);
+    for (const [avatar, status] of statuses) {
+        if (status.enabled) active.push(avatar);
     }
 
     if (chatMetadata[MetadataMap.universalTrackerOn])

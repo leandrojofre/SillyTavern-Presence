@@ -8,6 +8,7 @@ import {
     isActive,
     saveChatDebounced,
     t,
+    getUniqueArray,
 } from '../../index.js';
 
 import { commonEnumProviders } from '../../../../../slash-commands/SlashCommandCommonEnumsProvider.js';
@@ -292,13 +293,13 @@ async function commandCopy({ source_index = '', target_index = '' } = {}) {
     const sourceMess = chat[sourceIndex];
     const targetMess = chat[targetIndex];
 
-    if (!chat[sourceIndex]) return toastr.warning(t`Source mess=#${sourceIndex} was not found`, Presence.extensionName);
-    if (!chat[targetIndex]) return toastr.warning(t`Target mess=#${targetIndex} was not found`, Presence.extensionName);
+    if (!sourceMess) return toastr.warning(t`Source mess=#${sourceIndex} was not found`, Presence.extensionName);
+    if (!targetMess) return toastr.warning(t`Target mess=#${targetIndex} was not found`, Presence.extensionName);
 
-    targetMess.present = [...new Set([
+    targetMess.present = getUniqueArray([
         ...targetMess.present ?? [],
         ...sourceMess.present ?? []
-    ])];
+    ]);
 
     log(`/presenceCopy source_index="${sourceIndex}" target_index="${targetIndex}"`, {source_index: source_index, target_index: target_index});
     log(`Copied the tracker from mess=#${sourceIndex} into mess=#${targetIndex}`);
