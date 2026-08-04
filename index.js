@@ -1,4 +1,5 @@
 import {saveChatDebounced} from '../../../../script.js';
+import {StatUsMaximusExtension} from './src/classes/StatUsMaximusExtension.js'
 import * as eventListeners from './src/js/eventListeners.js';
 import * as slashCommands from './src/js/slashCommands.js';
 import * as presenceMacros from './src/js/macros.js';
@@ -19,6 +20,7 @@ export {
     getUniqueArray,
     getMessageIdChunks,
     extensionSettings,
+    metadataName,
 	t,
 }
 
@@ -29,6 +31,8 @@ export {
 /** @typedef {Presence.ExtensionSettings} ExtensionSettings */
 /** @typedef {Presence.MessageIdChunk} MessageIdChunk */
 /** @typedef {Presence.HTMLTemplateGetOptions} HTMLTemplateGetOptions */
+/** @typedef {Presence.PresenceModes} PresenceModes */
+/** @typedef {Presence.CommonTrackingButtonSetting} CommonTrackingButtonSetting */
 
 /** @type {() => SillyTavernContext} */
 const context = SillyTavern.getContext;
@@ -47,7 +51,7 @@ const {
 
 const extensionName = 'Presence';
 const extensionFullName = `SillyTavern-${extensionName}`;
-const metadataName = extensionName.toLowerCase().replaceAll('-', '_');
+const metadataName = extensionName.toLowerCase().replaceAll('-', '_') + '_extension';
 const htmlSuffix = extensionName.toLowerCase();
 const extensionFolderPath = `scripts/extensions/third-party/${extensionFullName}`;
 const defaultAvatarIcon = 'img/quill.png';
@@ -65,10 +69,31 @@ const defaultSettings = {
 	debug: false,
 };
 
+/** @type {Presence.ExtensionMetadata} */
+const defaultMetadata = {
+    char_mode: {},
+};
+
 const MetadataMap = {
 	universalTrackerOn: 'universal_tracker_on',
     universalTrackerLabel: 'presence_universal_tracker',
-}
+};
+
+/** @type {Record<PresenceModes, CommonTrackingButtonSetting>} */
+const commonTrackingButtonSettings = {
+    present: {
+        title: 'The character is present',
+    },
+    on_status_detached: {
+        title: 'This character will only see the messages where the currently active detached Status blocks are present',
+    },
+    ignore: {
+        title: 'Presence ignored',
+    },
+};
+
+/** @type {Map<PresenceModes, PresenceModes>} */
+const presenceModes = new Map();
 
 // * MARK:Debug
 
@@ -198,6 +223,11 @@ function getCurrentParticipants() {
 	if (!group) return { members: [], present: [] };
 
 	let active = [...group.members];
+    const statuses = Presence.ext('StatUsMaximus').call('getStatuses') || [];
+
+    for (const s of statuses) {
+        if (s.enabled) active.push(s.avatar);
+    }
 
     if (chatMetadata[MetadataMap.universalTrackerOn])
         active.push('presence_universal_tracker');
@@ -205,13 +235,28 @@ function getCurrentParticipants() {
 	if (!extensionSettings.includeMuted)
 		active = active.filter(char => !group.disabled_members.includes(char));
 
-	if (!chatMetadata.ignore_presence) chatMetadata.ignore_presence = [];
-
-	chatMetadata.ignore_presence.forEach(char => {
-		if (active.includes(char)) active.splice(active.indexOf(char), 1);
+	Object
+    .entries(Presence.metadata('char_mode'))
+    .forEach(([char, mode]) => {
+		if (mode === 'ignore' && active.includes(char))
+            active.splice(active.indexOf(char), 1);
 	});
 
+    active = getUniqueArray(active, (m) => m?.length);
+
 	return { members: group.members, present: active };
+}
+
+function getAvatarImage(file, {statuses = null}) {
+    statuses = statuses ?? Presence.ext('StatUsMaximus').getAvatarMap();
+
+    const thumbnail = statuses.has(file) ? statuses.get(file).getThumbnail() : getThumbnailUrl('avatar', file);
+
+    return {thumbnail, fallback: () => {
+        const status = Presence.ext('StatUsMaximus').call('getStatus', file) || {getThumbnail: () => defaultAvatarIcon};
+
+        return status.getThumbnail();
+    }};
 }
 
 /**
@@ -233,6 +278,8 @@ export async function addPresenceTrackerToMessages(refresh = false) {
 	const selector = '#chat .mes:not(.smallSysMes, [has_presence_tracker="true"])';
     const elements = $(selector).toArray();
 	const chat = context().chat;
+    const members = getCurrentParticipants().members;
+    const statuses = Presence.ext('StatUsMaximus').getAvatarMap();
 
     for (const element of elements) {
         const mesId = $(element).attr('mesid');
@@ -240,8 +287,12 @@ export async function addPresenceTrackerToMessages(refresh = false) {
 
         mes.present = getUniqueArray(mes.present ?? []);
 
-        const members = getCurrentParticipants().members;
-        const trackerMembers = getUniqueArray([...members, ...mes.present]).sort();
+        const trackerMembers = getUniqueArray([
+            ...members,
+            ...mes.present,
+            ...statuses.keys(),
+        ]).sort();
+
         const presenceTracker = await HTML_TEMPLATES.get('trackerChat', {clone: true});
 
         for (const member of trackerMembers) {
@@ -256,10 +307,17 @@ export async function addPresenceTrackerToMessages(refresh = false) {
             }
 
             const memberIcon = await HTML_TEMPLATES.get('trackerChatMember', {clone: true});
+            const avatarImg = getAvatarImage(member, {statuses});
+            const title = statuses.has(member) ? statuses.get(member).name : member;
 
             memberIcon.data('member', member);
+            memberIcon.attr('title', title);
             memberIcon.toggleClass('present', isPresent);
-            memberIcon.find('.presence_avatar').attr('src', getThumbnailUrl('avatar', member));
+            memberIcon.find('.presence_avatar').one('error', {fallback: avatarImg.fallback}, function (e) {
+                $(e.target).off('error');
+                $(e.target).attr('src', e.data.fallback());
+            }).attr('src', avatarImg.thumbnail)
+
             presenceTracker.append(memberIcon);
         };
 
@@ -276,23 +334,36 @@ export async function addPresenceTrackerToMessages(refresh = false) {
 /**
  * @param {ChatMessageExtended} message
  * @param {Object} [options]
- * @param {string|null} [options.avatar] If provided, the avatar of the character for which the message's presence should be checked.
- * @returns {boolean} Whether the message should be hidden or not according
+ * @param {string} [options.avatar] If provided, the avatar of the character for which the message's presence should be checked.
+ * @param {Map<string, StatUsMaximus.Status>} [options.statuses] If provided, filters using this Status map
+ * @returns {boolean} Whether the message should be hidden
  */
-function canToggleHideMessage(message, {avatar = null} = {}) {
-	const present = message.present ?? [];
-	const charIsPresent = present.includes(avatar) || present.includes('presence_universal_tracker');
+function canToggleHideMessage(message, {avatar = null, statuses = new Map()} = {}) {
+	const forceManualToggleOff = message?.presence_manually_hidden && !message.is_system;
 
-	const hasManuallyHiddenFlag = 'presence_manually_hidden' in message;
-	const forceManualToggleOff = message.presence_manually_hidden && !message.is_system;
-
-	if (forceManualToggleOff && hasManuallyHiddenFlag)
+	if (forceManualToggleOff)
 		message.presence_manually_hidden = false;
 
-	if (message.presence_manually_hidden) return false;
-	if (!charIsPresent && avatar !== null) return false;
+	if (message?.presence_manually_hidden) return false;
 
-	return true;
+	const present = message.present ?? [];
+    const universalPresent = present.includes(MetadataMap.universalTrackerLabel);
+
+    if (!avatar || universalPresent) return true;
+
+    const charModes = Presence.metadata('char_mode');
+    const presenceMode = charModes[avatar];
+
+    if (presenceMode === 'ignore') return true;
+
+    const avatarPresent = present.includes(avatar);
+
+    if (presenceMode === 'present' && avatarPresent) return true;
+
+    if (presenceMode === 'on_status_detached' && avatarPresent)
+        return present.some(p => statuses.has(p));
+
+	return false;
 }
 
 /**
@@ -304,12 +375,13 @@ function getMessageIdChunks(avatar = null) {
 
 	if (!chat || !chat.length) return [];
 
-	/** @type {MessageIdChunk[]} */
-	const messageIdChunks = [{}];
+	const statuses = Presence.ext('StatUsMaximus').getAvatarMap();
+	const messageIdChunks = /** @type {MessageIdChunk[]} */([]);
 	let current_chunk = 0;
 
 	for (const [mesId, mess] of chat.entries()) {
-		if (!canToggleHideMessage(mess, {avatar})) continue;
+		if (!canToggleHideMessage(mess, {avatar, statuses})) continue;
+        if (!messageIdChunks.length) messageIdChunks.push({});
 
 		const chunk = messageIdChunks[current_chunk];
 		const hasStart = 'start' in chunk;
@@ -403,27 +475,6 @@ function updateMessagePresence(mesId, member, isPresent) {
 	saveChatDebounced();
 }
 
-function togglePresenceTracking(e) {
-	const target = $(e.target).closest(".group_member");
-	const charId = target.data("chid");
-	const charAvatar = context().characters[charId].avatar;
-	const chatMetadata = context().chatMetadata;
-	const ignorePresence = chatMetadata.ignore_presence || [];
-
-    chatMetadata.ignore_presence = chatMetadata.ignore_presence || [];
-
-	if (!ignorePresence.includes(charAvatar)) {
-		chatMetadata.ignore_presence.push(charAvatar);
-	} else {
-		chatMetadata.ignore_presence = ignorePresence.filter((c) => c != charAvatar);
-	}
-
-    chatMetadata.ignore_presence = getUniqueArray(chatMetadata.ignore_presence);
-
-	saveChatDebounced();
-	updatePresenceTrackingButton(target);
-}
-
 function toggleMessagesManuallyHiddenFlag(e) {
 	const { chat } = context();
 	const $mess = $(e.target).closest('.mes');
@@ -441,21 +492,78 @@ function updatePresenceTrackingButton(member) {
 
 	const target = $(member).find('.ignore_presence_toggle');
 	const charId = $(member).data('chid');
-	const characters = context().characters;
-	const chatMetadata = context().chatMetadata;
+	const character = context().characters[charId];
+	const charModes = Presence.metadata('char_mode');
 
-    if (!characters[charId]?.avatar) return;
+    if (!character?.avatar) return;
 
-    const isIgnored = chatMetadata?.ignore_presence?.includes(characters[charId].avatar);
+    const mode = charModes[character.avatar];
 
-    target.toggleClass('active', isIgnored);
+    target.toggleClass('presence_ignore_shadow', mode === 'ignore');
+    target.toggleClass('presence_on_status_shadow', mode === 'on_status_detached');
+    target.attr('title', commonTrackingButtonSettings[mode].title);
 }
 
+function togglePresenceTracking(e) {
+	const target = $(e.target).closest('.group_member');
+	const charId = target.data('chid');
+	const charAvatar = context().characters[charId].avatar;
+	const charModes = Presence.metadata('char_mode');
+    const nextMode = presenceModes.get(charModes[charAvatar]) || 'ignore';
+
+    charModes[charAvatar] = nextMode;
+    Presence.metadata('char_mode', charModes);
+
+	saveChatDebounced();
+	updatePresenceTrackingButton(target);
+}
+
+function toggleMessageIcon(e) {
+    const target = $(e.target).closest('.presence_icon');
+    const mesId = $(e.target).closest('.mes')?.attr('mesid');
+    const isPresent = target.hasClass('present');
+    const member = target.data('member');
+
+    if (!mesId || !member) return;
+
+    target.toggleClass('present', !isPresent);
+    updateMessagePresence(mesId, member, !isPresent);
+}
+
+/**
+ * @type {Presence.GlobalInterface}
+ */
 globalThis.Presence = {
+    extensions: {},
+    ext(key) {
+        return Presence.extensions[key];
+    },
+    metadata(key, value) {
+        const { chatMetadata } = context();
+        const metadata = structuredClone(defaultMetadata);
+
+        Object.assign(metadata, chatMetadata.presence_extension ?? {});
+
+        if (value) metadata[key] = value;
+
+        chatMetadata.presence_extension = metadata;
+
+        return metadata[key];
+    },
+    addPresenceMode(mode) {
+        const [from, to] = presenceModes.entries().toArray().pop();
+
+        presenceModes.set(from, mode);
+        presenceModes.set(mode, to);
+    },
 	toggleVisibilityAllMessages,
 	hideChatMessageRange,
 	getMessageIdChunks,
+    log,
+    debug,
+    error,
 	extensionName,
+    presenceModes,
 };
 
 // * MARK:Extension Settings
@@ -474,12 +582,23 @@ const settingsCallbacks = {
 	},
 }
 
+/**
+ * @param {JQuery|HTMLElement} element
+ * @returns {{callback: Function; setting: string;}}
+ */
+function getSettingInputCallback(element) {
+    const $target = $(element);
+    const setting = $target.attr(`${htmlSuffix}-setting`);
+    const callback = settingsCallbacks[setting];
+
+    return {callback, setting};
+}
+
 /** Changes a setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsBooleanButton(event) {
-    const target = event.target;
-    const value = Boolean($(target).prop('checked'));
-    const setting = target.getAttribute(`${htmlSuffix}-setting`);
-    const callback = settingsCallbacks[setting];
+    const $target = $(event.target);
+    const {callback, setting} = getSettingInputCallback($target);
+    const value = Boolean($target.prop('checked'));
 
     extensionSettings[setting] = value;
 
@@ -491,11 +610,17 @@ function settingsBooleanButton(event) {
 
 /** Changes a string setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsTextButton(event) {
-    const target = event.target;
-    const value = String($(target).val());
+    const $target = $(event.target);
+    const {callback, setting} = getSettingInputCallback($target);
+    const value = String($target.val());
+    const pattern = String($target.attr('pattern') || '');
 
-    const setting = target.getAttribute(`${htmlSuffix}-setting`);
-    const callback = settingsCallbacks[setting];
+    if (pattern) {
+        const regex = new RegExp(pattern);
+        const isValid = regex.test(value);
+
+        if (!isValid) return;
+    }
 
     extensionSettings[setting] = value;
 
@@ -507,18 +632,20 @@ function settingsTextButton(event) {
 
 /** Changes a number setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsNumberButton(event) {
-    const target = /** @type {HTMLInputElement} */ (event.target);
-    const raw_value = isNaN(target.valueAsNumber) ? 0 : target.valueAsNumber;
-    const insideMinBoundary = (target.min !== '') ? (Number(target.min) <= raw_value) : true;
-    const insideMaxBoundary = (target.max !== '') ? (Number(target.max) >= raw_value) : true;
+    const target = /** @type {HTMLSelectElement} */(event.target);
+    const {callback, setting} = getSettingInputCallback(target);
 
+    const defValue = defaultSettings[setting];
+    const raw_value = isNaN(Number(target.value)) ? defValue : Number(target.value);
+    const min = Number(target.getAttribute('min') || raw_value);
+    const max = Number(target.getAttribute('max') || raw_value);
+
+    const insideMinBoundary = min !== raw_value ? (min <= raw_value) : true;
+    const insideMaxBoundary = max !== raw_value ? (max >= raw_value) : true;
     let value = raw_value;
 
-    if (!insideMinBoundary) value = Number(target.min);
-    if (!insideMaxBoundary) value = Number(target.max);
-
-    const setting = target.getAttribute(`${htmlSuffix}-setting`);
-    const callback = settingsCallbacks[setting];
+    if (!insideMinBoundary) value = min;
+    if (!insideMaxBoundary) value = max;
 
     extensionSettings[setting] = value;
 
@@ -567,6 +694,14 @@ async function loadSettingsMenu() {
 // * MARK:Initialization
 
 async function initializeFeatures() {
+    Presence.extensions.StatUsMaximus = new StatUsMaximusExtension();
+
+    presenceModes.set('ignore', 'present');
+    presenceModes.set('present', 'ignore');
+
+    if (Presence.ext('StatUsMaximus').enabled)
+        Presence.addPresenceMode('on_status_detached');
+
     const universalTrackerToggle = await HTML_TEMPLATES.get('universalTrackerToggle');
 	const universalTrackerContainer = $('#GroupFavDelOkBack div:has(#rm_group_automode_label)');
 
@@ -583,17 +718,7 @@ async function initializeFeatures() {
 	$(document).on('mouseup touchend', '#show_more_messages', () => addPresenceTrackerToMessages());
 	$('#rm_group_members').on('click', '.ignore_presence_toggle', togglePresenceTracking);
 	$('#chat').on('click', '.mes_button.mes_hide, .mes_button.mes_unhide', toggleMessagesManuallyHiddenFlag);
-    $('#chat').on('click', '.mes_presence_tracker .presence_icon', (e) => {
-        const target = $(e.target).closest('.presence_icon');
-        const mesId = $(e.target).closest('.mes')?.attr('mesid');
-        const isPresent = target.hasClass('present');
-        const member = target.data('member');
-
-        if (!mesId || !member) return;
-
-        target.toggleClass('present', !isPresent);
-        updateMessagePresence(mesId, member, !isPresent);
-    });
+    $('#chat').on('click', '.mes_presence_tracker .presence_icon', toggleMessageIcon);
 }
 
 eventSource.once(eventTypes.APP_INITIALIZED, async function () {

@@ -15,6 +15,11 @@ import { stringToRange } from '../../../../../utils.js';
 
 // * MARK:Methods
 
+const {
+    SlashCommandEnumValue,
+    characters,
+} = SillyTavern.getContext();
+
 function sanitizeCharID(str) {
     return str.replace(/(\.[\w\d]+)$/i, '');
 }
@@ -24,7 +29,7 @@ function sanitizeCharID(str) {
  * @param {object} [options]
  * @param {boolean} [options.allowAvatar]
  * @param {boolean} [options.preferMembers]
- * @return {Character}
+ * @return {Character|StatUsMaximus.UserCharacter}
  */
 function findCharacter(search, {allowAvatar = true} = {}) {
     const {characters, groupId, groups} = context();
@@ -40,8 +45,38 @@ function findCharacter(search, {allowAvatar = true} = {}) {
     if (!character) character = members.find(m => m.name === search);
     if (!character) character = characters.find(c => c.name === search);
 
+    if (!character) {
+        const statuses = Presence.ext('StatUsMaximus').getAvatarMap();
+
+        character = statuses.get(search)?.getCharacter();
+    }
+
     return character;
 }
+
+
+const ENUMS_PROVIDER = {
+    characters: function() {
+        return characters.map(char => new SlashCommandEnumValue(char.name));
+    },
+
+    status: function() {
+        return Presence.ext('StatUsMaximus')
+            .getAvatarMap()
+            .values()
+            .map(s => new SlashCommandEnumValue(s.avatar, s.name));
+    },
+
+    entities: () => [
+        ...ENUMS_PROVIDER.status(),
+        ...ENUMS_PROVIDER.characters()
+    ],
+
+    boolean: [
+        new SlashCommandEnumValue('true'),
+        new SlashCommandEnumValue('false')
+    ],
+};
 
 async function commandForget(namedArgs, message_id) {
     if (!isActive()) return;
@@ -414,7 +449,7 @@ export function initialize() {
                     description: 'Character name - or unique character identifier (avatar key)',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: commonEnumProviders.characters('character'),
+                    enumProvider: ENUMS_PROVIDER.entities,
                 }),
             ],
             unnamedArgumentList: [
@@ -457,7 +492,7 @@ export function initialize() {
                     description: 'Character name - or unique character identifier (avatar key)',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: commonEnumProviders.characters('all'),
+                    enumProvider: ENUMS_PROVIDER.entities,
                 }),
             ],
             helpString: `
@@ -493,7 +528,7 @@ export function initialize() {
                     description: 'Character name - or unique character identifier (avatar key)',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: commonEnumProviders.characters('character'),
+                    enumProvider: ENUMS_PROVIDER.entities,
                 }),
             ],
             unnamedArgumentList: [
@@ -536,7 +571,7 @@ export function initialize() {
                     description: 'name',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: commonEnumProviders.characters('all'),
+                    enumProvider: ENUMS_PROVIDER.entities,
                 }),
             ],
             helpString: `
@@ -567,28 +602,28 @@ export function initialize() {
                     description: 'Character name - or unique character identifier (avatar key) of the character to be replaced',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: commonEnumProviders.characters('character'),
+                    enumProvider: ENUMS_PROVIDER.entities,
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'replace',
                     description: 'Character name - or unique character identifier (avatar key) of the replacement',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: commonEnumProviders.characters('character'),
+                    enumProvider: ENUMS_PROVIDER.entities,
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'forget',
                     description: 'Make the original character forget the messages - true by default',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
-                    enumProvider: commonEnumProviders.boolean(),
+                    enumList: ENUMS_PROVIDER.boolean,
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'forceName',
                     description: 'Skip checking if <code>name</code> is a valid character identifier - Used to move presence history from a character that no longer exists',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
-                    enumProvider: commonEnumProviders.boolean(),
+                    enumList: ENUMS_PROVIDER.boolean,
                 }),
             ],
             unnamedArgumentList: [
@@ -672,7 +707,7 @@ export function initialize() {
                     typeList: [ARGUMENT_TYPE.STRING],
                     defaultValue: '',
                     isRequired: false,
-                    enumProvider: commonEnumProviders.characters('all'),
+                    enumProvider: ENUMS_PROVIDER.entities,
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'unlock',
@@ -680,7 +715,7 @@ export function initialize() {
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     defaultValue: 'false',
                     isRequired: false,
-                    enumProvider: commonEnumProviders.boolean(),
+                    enumList: ENUMS_PROVIDER.boolean,
                 }),
             ],
             unnamedArgumentList: [

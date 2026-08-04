@@ -24,6 +24,8 @@ function initialize() {
             if (!isActive()) return '';
 
             const validMsgId = String(messageId ?? '').trim() !== '';
+            const statuses = Presence.ext('StatUsMaximus').getAvatarMap({onlyEnabled: false});
+            const characters = context().characters;
             let participants = [];
 
             if (validMsgId) {
@@ -34,14 +36,17 @@ function initialize() {
                 participants = getCurrentParticipants().present;
             }
 
-            const characters = participants.map((avatar) => {
-                const character = context().characters.find(char => char.avatar === avatar);
-                return character && character?.name ? character.name : null;
+            participants = participants.map((avatar) => {
+                if (statuses.has(avatar)) return null;
+
+                const member = characters.find(char => char.avatar === avatar);
+
+                return member && member?.name ? member.name : null;
             });
 
-            const charactersFiltered = characters.filter(name => name !== null);
+            const participantsFiltered = participants.filter(name => name !== null);
 
-            return charactersFiltered?.length ? charactersFiltered.join(', ') : '';
+            return participantsFiltered?.length ? participantsFiltered.join(', ') : '';
         },
         unnamedArgs: [{
             name: 'messageId',

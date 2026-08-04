@@ -136,19 +136,27 @@
 	width: 24px;
 }
 
-#rm_group_members .ignore_presence_toggle:not(.active) {
+#rm_group_members .ignore_presence_toggle {
 	opacity: 0.4;
 	filter: brightness(0.5);
 	transition: all 0.2s ease-in-out;
 }
 
 #rm_group_members .ignore_presence_toggle:hover {
-	opacity: inherit;
-	filter: drop-shadow(0px 0px 5px rgb(243, 65, 65));
+	opacity: 1;
+    filter: brightness(2) var(--shadow);
 }
 
-#rm_group_members .ignore_presence_toggle.active {
-	filter: drop-shadow(0px 0px 5px rgb(243, 65, 65));
+#rm_group_members .presence_ignore_shadow {
+    --shadow: drop-shadow(0px 0px 5px rgb(243, 65, 65));
+	opacity: 1;
+	filter: var(--shadow);
+}
+
+#rm_group_members .presence_on_status_shadow {
+    --shadow: drop-shadow(0px 0px 5px rgb(210, 243, 65));
+	opacity: 1;
+	filter: var(--shadow);
 }
 
 #presence_settings .inline-drawer-content {

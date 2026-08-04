@@ -23,6 +23,10 @@ export {
 
 async function onChatChanged({forceUpdate = false} = {}) {
 	if (!isActive()) return;
+
+    // Just to initialize metadata on chat change
+    Presence.metadata('char_mode');
+
 	await addPresenceTrackerToMessages(forceUpdate);
 
     updateMemberListButton();
@@ -116,6 +120,11 @@ function onGroupMemberDrafted(type, charId) {
 function initialize() {
     eventSource.on(eventTypes.CHAT_CHANGED, async function (...args) {
         log("CHAT_CHANGED", args);
+
+        const [chatId] = args;
+
+        if (!chatId) return;
+
         onChatChanged({forceUpdate: true});
         updateMemberListButton();
     });
@@ -143,6 +152,7 @@ function initialize() {
     eventSource.makeFirst(eventTypes.GROUP_MEMBER_DRAFTED, function (...args) {
         log(eventTypes.GROUP_MEMBER_DRAFTED, args);
         onGroupMemberDrafted(lastGenType, args[0]);
+        updateMemberListButton();
     });
 
     eventSource.makeFirst(eventTypes.MESSAGE_RECEIVED, function (...args) {
@@ -159,5 +169,10 @@ function initialize() {
     eventSource.makeFirst(eventTypes.GENERATION_STOPPED, function (...args) {
         log("GENERATION_STOPPED", args);
         toggleVisibilityAllMessages(true);
+    });
+
+    eventSource.makeFirst(eventTypes.GROUP_WRAPPER_FINISHED, function (...args) {
+        log("GENERATION_STOPPED", args);
+        updateMemberListButton();
     });
 }
