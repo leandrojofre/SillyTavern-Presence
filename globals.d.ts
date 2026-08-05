@@ -24,6 +24,7 @@ declare namespace Presence {
         seeLast: boolean;
         includeMuted: boolean;
         disableTransition: boolean;
+        minMessageDisplay: number;
         debug: boolean;
     };
 

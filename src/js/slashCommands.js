@@ -9,6 +9,8 @@ import {
     saveChatDebounced,
     t,
     getUniqueArray,
+    extensionSettings,
+    htmlPrefix,
 } from '../../index.js';
 
 import { commonEnumProviders } from '../../../../../slash-commands/SlashCommandCommonEnumsProvider.js';
@@ -834,4 +836,43 @@ export function initialize() {
             `,
         })
     );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: 'presenceMinChatMessage',
+            callback(args, messageID) {
+                if (!messageID) return String(extensionSettings.minMessageDisplay || 0);
+
+                const newMinID = Number(messageID || 0);
+
+                $(`#${htmlPrefix}-min-message-display`)
+                    .val(newMinID)
+                    .trigger('input');
+
+                return String(newMinID);
+            },
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: 'Message ID (starts from zero)',
+                    isRequired: false,
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    enumProvider: commonEnumProviders.messages(),
+                }),
+            ],
+            returns: 'Message ID',
+            helpString: `
+            <div>
+                Sets a minimum message to allow to be seen by characters. Including the selected ID, all messages after will be shown. Previous messages will be hidden even if the active character is present. If no ID is provided, it returns the current minimum message ID.
+            </div>
+            <div>
+                <strong>Example:</strong>
+                <ul>
+                    <li>
+                        <pre><code>/presenceMinChatMessage 10</code></pre>
+                    </li>
+                </ul>
+            </div>
+            `,
+        })
+    )
 }

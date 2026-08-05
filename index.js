@@ -19,6 +19,7 @@ export {
     hideChatMessageRange,
     getUniqueArray,
     getMessageIdChunks,
+    htmlPrefix,
     extensionSettings,
     metadataName,
 	t,
@@ -52,7 +53,7 @@ const {
 const extensionName = 'Presence';
 const extensionFullName = `SillyTavern-${extensionName}`;
 const metadataName = extensionName.toLowerCase().replaceAll('-', '_') + '_extension';
-const htmlSuffix = extensionName.toLowerCase();
+const htmlPrefix = extensionName.toLowerCase();
 const extensionFolderPath = `scripts/extensions/third-party/${extensionFullName}`;
 const defaultAvatarIcon = 'img/quill.png';
 
@@ -66,6 +67,7 @@ const defaultSettings = {
 	seeLast: true,
 	includeMuted: false,
     disableTransition: false,
+    minMessageDisplay: 0,
 	debug: false,
 };
 
@@ -336,14 +338,10 @@ export async function addPresenceTrackerToMessages(refresh = false) {
  * @param {Object} [options]
  * @param {string} [options.avatar] If provided, the avatar of the character for which the message's presence should be checked.
  * @param {Map<string, StatUsMaximus.Status>} [options.statuses] If provided, filters using this Status map
- * @returns {boolean} Whether the message should be hidden
+ * @returns {boolean} Whether the message should be unhidden
  */
-function canToggleHideMessage(message, {avatar = null, statuses = new Map()} = {}) {
-	const forceManualToggleOff = message?.presence_manually_hidden && !message.is_system;
-
-	if (forceManualToggleOff)
-		message.presence_manually_hidden = false;
-
+function canToggleVisibility(message, {avatar = null, statuses = new Map()} = {}) {
+	if (!message.is_system) delete message.presence_manually_hidden;
 	if (message?.presence_manually_hidden) return false;
 
 	const present = message.present ?? [];
@@ -371,31 +369,38 @@ function canToggleHideMessage(message, {avatar = null, statuses = new Map()} = {
  * @returns {MessageIdChunk[]} An array of message ID ranges that can be hidden by Presence.
  */
 function getMessageIdChunks(avatar = null) {
-	const chat = context().chat;
+	const chatFull = context().chat || [];
+    const minMessageDisplay = extensionSettings.minMessageDisplay;
+    const chat = avatar ? chatFull.slice(minMessageDisplay) : chatFull;
 
-	if (!chat || !chat.length) return [];
+	if (!chat.length) return [];
 
+    /** @type {MessageIdChunk[]} */
+	const messageIdChunks = [];
 	const statuses = Presence.ext('StatUsMaximus').getAvatarMap();
-	const messageIdChunks = /** @type {MessageIdChunk[]} */([]);
 	let current_chunk = 0;
 
-	for (const [mesId, mess] of chat.entries()) {
-		if (!canToggleHideMessage(mess, {avatar, statuses})) continue;
+	for (const [i, mess] of chat.entries()) {
+        const canToggle = canToggleVisibility(mess, {avatar, statuses});
+
+		if (!canToggle) continue;
         if (!messageIdChunks.length) messageIdChunks.push({});
 
 		const chunk = messageIdChunks[current_chunk];
 		const hasStart = 'start' in chunk;
+        const mesID = avatar ? minMessageDisplay + i : i;
 
 		if (!hasStart) {
-			chunk.start = mesId;
-			chunk.end = mesId;
-		} else if (chunk.end + 1 === mesId) {
-			chunk.end = mesId;
+			chunk.start = mesID;
+			chunk.end = mesID;
+		} else if (chunk.end + 1 === mesID) {
+			chunk.end = mesID;
 		} else {
 			current_chunk++;
+
 			messageIdChunks.push({
-				start: mesId,
-				end: mesId,
+				start: mesID,
+				end: mesID,
 			});
 		}
 	};
@@ -531,6 +536,7 @@ function toggleMessageIcon(e) {
 }
 
 /**
+ * MARK:Interface
  * @type {Presence.GlobalInterface}
  */
 globalThis.Presence = {
@@ -588,7 +594,7 @@ const settingsCallbacks = {
  */
 function getSettingInputCallback(element) {
     const $target = $(element);
-    const setting = $target.attr(`${htmlSuffix}-setting`);
+    const setting = $target.attr(`${htmlPrefix}-setting`);
     const callback = settingsCallbacks[setting];
 
     return {callback, setting};
@@ -640,8 +646,9 @@ function settingsNumberButton(event) {
     const min = Number(target.getAttribute('min') || raw_value);
     const max = Number(target.getAttribute('max') || raw_value);
 
-    const insideMinBoundary = min !== raw_value ? (min <= raw_value) : true;
-    const insideMaxBoundary = max !== raw_value ? (max >= raw_value) : true;
+    const insideMinBoundary = min <= raw_value;
+    const insideMaxBoundary = max >= raw_value;
+
     let value = raw_value;
 
     if (!insideMinBoundary) value = min;
@@ -651,6 +658,7 @@ function settingsNumberButton(event) {
 
     if (callback) callback();
 
+    $(target).val(value);
     log('toggleSetting ' + setting, value);
     saveSettingsDebounced();
 }
@@ -669,24 +677,26 @@ async function loadSettingsMenu() {
 
     $('#extensions_settings').append(settingsHtml);
 
-    $(`#${htmlSuffix}-enabled`).on('input', settingsBooleanButton);
+    $(`#${htmlPrefix}-enabled`).on('input', settingsBooleanButton);
 
-	$(`#${htmlSuffix}-location`).on('change', settingsTextButton);
-	$(`#${htmlSuffix}-see-last`).on('input', settingsBooleanButton);
-	$(`#${htmlSuffix}-include-muted`).on('input', settingsBooleanButton);
-	$(`#${htmlSuffix}-disable-transition`).on('input', settingsBooleanButton);
+	$(`#${htmlPrefix}-location`).on('change', settingsTextButton);
+	$(`#${htmlPrefix}-see-last`).on('input', settingsBooleanButton);
+	$(`#${htmlPrefix}-include-muted`).on('input', settingsBooleanButton);
+	$(`#${htmlPrefix}-disable-transition`).on('input', settingsBooleanButton);
+	$(`#${htmlPrefix}-min-message-display`).on('input', settingsNumberButton);
 
-    $(`#${htmlSuffix}-debug`).on('input', settingsBooleanButton);
-    $(`#${htmlSuffix}-check-configuration`).on('click', displaySettings);
+    $(`#${htmlPrefix}-debug`).on('input', settingsBooleanButton);
+    $(`#${htmlPrefix}-check-configuration`).on('click', displaySettings);
 
     log('Settings menu created');
 
-    $(`#${htmlSuffix}-enabled`).prop('checked', extensionSettings.enabled).trigger('input');
-    $(`#${htmlSuffix}-location`).val(extensionSettings.location).trigger('change');
-    $(`#${htmlSuffix}-see-last`).prop('checked', extensionSettings.seeLast).trigger('input');
-    $(`#${htmlSuffix}-include-muted`).prop('checked', extensionSettings.includeMuted).trigger('input');
-    $(`#${htmlSuffix}-disable-transition`).prop('checked', extensionSettings.disableTransition).trigger('input');
-    $(`#${htmlSuffix}-debug`).prop('checked', extensionSettings.debug).trigger('input');
+    $(`#${htmlPrefix}-enabled`).prop('checked', extensionSettings.enabled).trigger('input');
+    $(`#${htmlPrefix}-location`).val(extensionSettings.location).trigger('change');
+    $(`#${htmlPrefix}-see-last`).prop('checked', extensionSettings.seeLast).trigger('input');
+    $(`#${htmlPrefix}-include-muted`).prop('checked', extensionSettings.includeMuted).trigger('input');
+    $(`#${htmlPrefix}-disable-transition`).prop('checked', extensionSettings.disableTransition).trigger('input');
+    $(`#${htmlPrefix}-min-message-display`).val(extensionSettings.minMessageDisplay).trigger('input');
+    $(`#${htmlPrefix}-debug`).prop('checked', extensionSettings.debug).trigger('input');
 
     log('Settings values initialized', extensionSettings);
 }

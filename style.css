@@ -21,6 +21,10 @@
 		margin-bottom: 5px;
 	}
 
+    .gap-0 {
+        gap: 0;
+    }
+
 	.m-0 {
 		margin: 0;
 	}
@@ -28,6 +32,10 @@
 	.p-15px {
 		padding: 15px;
 	}
+
+    .inline-drawer-content {
+        padding: 10px;
+    }
 }
 
 #chat {
@@ -159,11 +167,7 @@
 	filter: var(--shadow);
 }
 
-#presence_settings .inline-drawer-content {
-    padding: 10px;
-}
-
-.mes_block > .ch_name > .flex1 {
+#chat .mes_block > .ch_name > .flex1 {
 	flex-wrap: nowrap;
 	align-items: flex-start;
 }

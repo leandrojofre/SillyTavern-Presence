@@ -23,6 +23,15 @@
 					<input id="presence-include-muted" presence-setting="includeMuted" type="checkbox" />
 					<span>Muted characters will be included as present in new messages</span>
 				</label>
+
+                <label class="flex-container flex-column">
+                    <div class="flex-container flex-column gap-0">
+                        <span>Select min. chat message to see</span>
+                        <small>Including selected ID, all messages after will be shown. Messages before will be hidden.</small>
+                    </div>
+
+                    <input id="presence-min-message-display" presence-setting="minMessageDisplay" class="text_pole flex1 m-0" min="0" type="number" />
+                </label>
 			</div>
 
 			<div class="flex-container flex-column separator-bottom">
@@ -33,14 +42,17 @@
 					<span>Disable animations for the presence tracker</span>
 				</label>
 
-				<div class="flex-container flex-column">
-					<label for="presence-location">Message Presence Tracker Location</label>
-					<small>Select the location for the presence tracker on messages</small>
+				<label class="flex-container flex-column">
+                    <div class="flex-container flex-column gap-0">
+                        <span>Message Presence Tracker Location</span>
+                        <small>Select the location for the presence tracker on messages</small>
+                    </div>
+
 					<select class="text_pole flex1 m-0" id="presence-location" presence-setting="location">
 						<option value="top">Top</option>
 						<option value="bottom">Bottom</option>
 					</select>
-				</div>
+				</label>
 			</div>
 
 			<div class="flex-container flex-column">
