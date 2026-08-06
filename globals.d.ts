@@ -39,7 +39,6 @@ declare namespace Presence {
 
     type GlobalInterfaceExtensions = {
         StatUsMaximus?: ExternalExtension<'StatUsMaximus'>;
-        QualityOfLife?: ExternalExtension<'QualityOfLife'>;
     };
 
     type ExternalExtension<Name extends keyof GlobalInterfaceExtensions = keyof GlobalInterfaceExtensions> = import('./src/classes/ExternalExtension.js').ExternalExtension<Name>;

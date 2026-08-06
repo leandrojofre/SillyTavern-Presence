@@ -59,8 +59,9 @@ export class ExternalExtension {
     getAvatarMap({onlyEnabled = true, onlyDetached = true} = {}) {
         if (!this.enabled || this.key !== 'StatUsMaximus') return new Map();
 
-        const statuses = Presence.ext('StatUsMaximus').call('getStatuses') || [];
+        /** @type {Map<string, StatUsMaximus.Status>} */
         const avatarMap = new Map();
+        const statuses = Presence.ext('StatUsMaximus').call('getStatuses') || [];
 
         for (const s of statuses) {
             if (onlyEnabled && !s.enabled) continue;
