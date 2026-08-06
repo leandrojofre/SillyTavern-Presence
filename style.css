@@ -101,9 +101,11 @@
 	width: var(--icon-size-minified);
 }
 
-#chat .mes_block .mes_presence_tracker .presence_icon img {
+#chat .mes_block .mes_presence_tracker .presence_avatar {
 	transition: var(--presence-tracker-transition);
 	width: var(--icon-size-minified);
+	height: var(--icon-size-minified);
+    object-fit: cover;
 }
 
 #chat .mes_block .mes_presence_tracker:hover .presence_icon {
@@ -136,8 +138,9 @@
 	margin-right: var(--gap-size) !important;
 }
 
-#chat .mes_block .mes_presence_tracker:hover .presence_icon img {
+#chat .mes_block .mes_presence_tracker:hover .presence_avatar {
 	width: var(--icon-size) !important;
+	height: var(--icon-size) !important;
 }
 
 #rm_group_members .ignore_presence_toggle::before {
