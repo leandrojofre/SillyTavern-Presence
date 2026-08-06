@@ -1,5 +1,5 @@
 import {saveChatDebounced} from '../../../../script.js';
-import {StatUsMaximusExtension} from './src/classes/StatUsMaximusExtension.js'
+import {ExternalExtension} from './src/classes/ExternalExtension.js';
 import * as eventListeners from './src/js/eventListeners.js';
 import * as slashCommands from './src/js/slashCommands.js';
 import * as presenceMacros from './src/js/macros.js';
@@ -249,7 +249,12 @@ function getCurrentParticipants() {
 	return { members: group.members, present: active };
 }
 
-function getAvatarImage(file, {statuses = null}) {
+/**
+ * @param {string} file
+ * @param {Object} [options]
+ * @param {Map<string, StatUsMaximus.Status>} [options.statuses]
+ */
+function getAvatarImage(file, {statuses = null} = {}) {
     statuses = statuses ?? Presence.ext('StatUsMaximus').getAvatarMap();
 
     const thumbnail = statuses.has(file) ? statuses.get(file).getThumbnail() : getThumbnailUrl('avatar', file);
@@ -542,6 +547,11 @@ function toggleMessageIcon(e) {
 globalThis.Presence = {
     extensions: {},
     ext(key) {
+        const exists = key in Presence.extensions;
+
+        // @ts-ignore
+        if (!exists) Presence.extensions[key] = new ExternalExtension(key);
+
         return Presence.extensions[key];
     },
     metadata(key, value) {
@@ -704,13 +714,13 @@ async function loadSettingsMenu() {
 // * MARK:Initialization
 
 async function initializeFeatures() {
-    Presence.extensions.StatUsMaximus = new StatUsMaximusExtension();
-
+    Presence.ext('StatUsMaximus');
     presenceModes.set('ignore', 'present');
     presenceModes.set('present', 'ignore');
 
-    if (Presence.ext('StatUsMaximus').enabled)
+    if (Presence.ext('StatUsMaximus').enabled) {
         Presence.addPresenceMode('on_status_detached');
+    }
 
     const universalTrackerToggle = await HTML_TEMPLATES.get('universalTrackerToggle');
 	const universalTrackerContainer = $('#GroupFavDelOkBack div:has(#rm_group_automode_label)');

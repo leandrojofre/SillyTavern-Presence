@@ -1,38 +1,44 @@
 /** @typedef {Presence.PresenceModes} PresenceModes */
+/** @typedef {Presence.GlobalInterfaceExtensions} GlobalInterfaceExtensions */
 
-export class StatUsMaximusExtension {
-    /** @type {boolean} */enabled;
-    /** @type {StatUsMaximus.GlobalInterface} */global;
+/**
+ * @template {keyof GlobalInterfaceExtensions} Name
+ */
+export class ExternalExtension {
+    /** @type {Name} */ key;
+    /** @type {boolean} */ enabled;
+    /** @type {typeof globalThis[Name]} */ global;
 
-    constructor () {
-        this.enabled = 'StatUsMaximus' in globalThis;
-        this.global = 'StatUsMaximus' in globalThis ? globalThis.StatUsMaximus : null;
+    /**
+     * @param {Name} key
+     */
+    constructor (key) {
+        this.key = key;
+        this.enabled = key in globalThis;
+        this.global = key in globalThis ? globalThis[key] : null;
     }
 
     /**
-     * @template {keyof StatUsMaximus.GlobalInterface} K
+     * @template {keyof typeof globalThis[Name]} K
      * @param {K} key
      * @param {unknown[]} [args]
-     * @returns {ReturnType<StatUsMaximus.GlobalInterface[K]>}
+     * @returns {ReturnType<typeof globalThis[Name][K]>}
      */
     call(key, ...args) {
         if (!this.enabled) return;
-        if (key === 'Status') return;
-        if (key === 'StatusEntry') return;
 
         const value = this.global[key];
 
         if (!value) return;
         if (typeof value !== 'function') return;
 
-        // @ts-ignore
         return args.length ? value(...args) : value();
     }
 
     /**
-     * @template {keyof StatUsMaximus.GlobalInterface} K
+     * @template {keyof typeof globalThis[Name]} K
      * @param {K} key
-     * @returns {StatUsMaximus.GlobalInterface[K]}
+     * @returns {typeof globalThis[Name][K]}
      */
     get(key) {
         if (!this.enabled) return;
@@ -51,9 +57,9 @@ export class StatUsMaximusExtension {
      * @returns {Map<string, StatUsMaximus.Status>}
      */
     getAvatarMap({onlyEnabled = true, onlyDetached = true} = {}) {
-        if (!this.enabled) return new Map();
+        if (!this.enabled || this.key !== 'StatUsMaximus') return new Map();
 
-        const statuses = this.call('getStatuses') || [];
+        const statuses = Presence.ext('StatUsMaximus').call('getStatuses') || [];
         const avatarMap = new Map();
 
         for (const s of statuses) {
