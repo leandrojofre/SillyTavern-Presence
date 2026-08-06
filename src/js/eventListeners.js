@@ -174,4 +174,18 @@ function initialize() {
         log("GENERATION_STOPPED", args);
         updateMemberListButton();
     });
+
+    const StatUsMaximus = Presence.ext('StatUsMaximus');
+
+    if (StatUsMaximus.enabled) {
+        eventSource.on(StatUsMaximus.global.EVENTS.THUMBNAIL_UPDATE, function (data) {
+            log(StatUsMaximus.global.EVENTS.THUMBNAIL_UPDATE, data);
+
+            const {oldThumbnail, newThumbnail} = data;
+
+            $('#chat')
+                .find(`.presence_avatar[src^="${oldThumbnail}"]`)
+                .attr('src', `${newThumbnail}?v=${Date.now()}`);
+        });
+    }
 }
