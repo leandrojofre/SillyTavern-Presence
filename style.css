@@ -164,7 +164,7 @@
 	filter: var(--shadow);
 }
 
-#rm_group_members .presence_on_status_shadow {
+#rm_group_members .presence_on_group_shadow {
     --shadow: drop-shadow(0px 0px 5px rgb(210, 243, 65));
 	opacity: 1;
 	filter: var(--shadow);

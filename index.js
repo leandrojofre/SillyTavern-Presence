@@ -86,8 +86,8 @@ const commonTrackingButtonSettings = {
     present: {
         title: 'The character is present',
     },
-    on_status_detached: {
-        title: 'This character will only see the messages where the currently active Status blocks are present',
+    on_group_present: {
+        title: 'This character will only see the messages where the currently active characters are present',
     },
     ignore: {
         title: 'Presence ignored',
@@ -342,29 +342,32 @@ export async function addPresenceTrackerToMessages(refresh = false) {
  * @param {ChatMessageExtended} message
  * @param {Object} [options]
  * @param {string} [options.avatar] If provided, the avatar of the character for which the message's presence should be checked.
- * @param {Map<string, StatUsMaximus.Status>} [options.statuses] If provided, filters using this status IDs
+ * @param {string[]} [options.present]
  * @returns {boolean} Whether the message should be unhidden
  */
-function canToggleVisibility(message, {avatar = null, statuses = new Map()} = {}) {
+function canToggleVisibility(message, {avatar = null, present = []} = {}) {
 	if (!message.is_system) delete message.presence_manually_hidden;
 	if (message?.presence_manually_hidden) return false;
 
-	const present = message.present ?? [];
-    const universalPresent = present.includes(MetadataMap.universalTrackerLabel);
+	const messPresent = message.present ?? [];
+    const universalPresent = messPresent.includes(MetadataMap.universalTrackerLabel);
 
-    if (!avatar || universalPresent) return true;
+    if (!avatar || universalPresent)
+        return true;
 
     const charModes = Presence.metadata('char_mode');
     const presenceMode = charModes[avatar] || 'present';
 
-    if (presenceMode === 'ignore') return true;
+    if (presenceMode === 'ignore')
+        return true;
 
-    const avatarPresent = present.includes(avatar);
+    const avatarPresent = messPresent.includes(avatar);
 
-    if (presenceMode === 'present' && avatarPresent) return true;
+    if (presenceMode === 'present' && avatarPresent)
+        return true;
 
-    if (presenceMode === 'on_status_detached' && avatarPresent)
-        return present.some(p => statuses.has(p));
+    if (presenceMode === 'on_group_present' && avatarPresent)
+        return messPresent.some(p => p !== avatar && present.includes(p));
 
 	return false;
 }
@@ -382,11 +385,11 @@ function getMessageIdChunks(avatar = null) {
 
     /** @type {MessageIdChunk[]} */
 	const messageIdChunks = [];
-	const statuses = Presence.getStatusAvatarMap({onlyDetached: false, onlyGroup: true});
+    const present = getCurrentParticipants().present;
 	let current_chunk = 0;
 
 	for (const [i, mess] of chat.entries()) {
-        const canToggle = canToggleVisibility(mess, {avatar, statuses});
+        const canToggle = canToggleVisibility(mess, {avatar, present});
 
 		if (!canToggle) continue;
         if (!messageIdChunks.length) messageIdChunks.push({});
@@ -511,7 +514,7 @@ function updatePresenceTrackingButton(member) {
     const mode = avatar in charModes ? charModes[avatar] : 'present';
 
     target.toggleClass('presence_ignore_shadow', mode === 'ignore');
-    target.toggleClass('presence_on_status_shadow', mode === 'on_status_detached');
+    target.toggleClass('presence_on_group_shadow', mode === 'on_group_present');
     target.attr('title', commonTrackingButtonSettings[mode]?.title || '');
 }
 
@@ -742,12 +745,9 @@ async function loadSettingsMenu() {
 
 async function initializeFeatures() {
     Presence.ext('StatUsMaximus');
-    presenceModes.set('ignore', 'present');
     presenceModes.set('present', 'ignore');
-
-    if (Presence.ext('StatUsMaximus').enabled) {
-        Presence.addPresenceMode('on_status_detached');
-    }
+    presenceModes.set('ignore', 'present');
+    Presence.addPresenceMode('on_group_present');
 
     const universalTrackerToggle = await HTML_TEMPLATES.get('universalTrackerToggle');
 	const universalTrackerContainer = $('#GroupFavDelOkBack div:has(#rm_group_automode_label)');

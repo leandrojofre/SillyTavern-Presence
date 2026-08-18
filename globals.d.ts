@@ -14,7 +14,7 @@ declare namespace Presence {
         chatMetadata: ChatMetadataExtended;
     };
 
-    type PresenceModes = 'present' | 'ignore' | 'on_status_detached'
+    type PresenceModes = 'present' | 'ignore' | 'on_group_present';
 
     type UILocationOption = 'top' | 'bottom';
 
