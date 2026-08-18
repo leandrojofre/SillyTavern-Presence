@@ -37,6 +37,12 @@ declare namespace Presence {
         clone?: boolean;
     };
 
+    type GetStatusMapOptions = {
+        onlyEnabled?: boolean;
+        onlyDetached?: boolean;
+        onlyGroup?: boolean;
+    }
+
     type GlobalInterfaceExtensions = {
         StatUsMaximus?: ExternalExtension<'StatUsMaximus'>;
     };
@@ -48,6 +54,7 @@ declare namespace Presence {
         ext: <K extends keyof GlobalInterfaceExtensions> (key: K) => GlobalInterfaceExtensions[K]
         metadata: <K extends keyof ExtensionMetadata> (key: K, value?: ExtensionMetadata[K]) => ExtensionMetadata[K];
         addPresenceMode: (mode: PresenceModes) => void;
+        getStatusAvatarMap: (options?: GetStatusMapOptions) => Map<string, StatUsMaximus.Status>;
         toggleVisibilityAllMessages: typeof import('./index.js').toggleVisibilityAllMessages;
         hideChatMessageRange: typeof import('./index.js').hideChatMessageRange;
         getMessageIdChunks: typeof import('./index.js').getMessageIdChunks;
@@ -59,7 +66,7 @@ declare namespace Presence {
     };
 
     type ExtensionMetadata = {
-        char_mode: Record<string, PresenceModes>;
+        char_mode?: Record<string, PresenceModes>;
     };
 
     type CommonTrackingButtonSetting = {

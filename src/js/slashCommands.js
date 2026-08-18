@@ -28,6 +28,26 @@ function sanitizeCharID(str) {
 }
 
 /**
+ * @returns {(Character|StatUsMaximus.UserCharacter)[]}
+ */
+function getChatMembers() {
+    const {characters, characterId, groupId, groups} = context();
+    const group = groupId ? groups.find(g => g.id === groupId) : null;
+    const members = group ? group.members.map(m => characters.find(c => c.avatar === m)) : [];
+    const statuses = Presence
+        .getStatusAvatarMap({onlyEnabled: false})
+        .values()
+        .map(s => s.getCharacter());
+
+    if (!members.length && characterId) members.push(characters[characterId]);
+
+    return [
+        ...members,
+        ...statuses,
+    ];
+}
+
+/**
  * @param {string} search
  * @param {object} [options]
  * @param {boolean} [options.allowAvatar]
@@ -35,9 +55,8 @@ function sanitizeCharID(str) {
  * @return {Character|StatUsMaximus.UserCharacter}
  */
 function findCharacter(search, {allowAvatar = true} = {}) {
-    const {characters, groupId, groups} = context();
-    const group = groupId ? groups.find(g => g.id === groupId) : null;
-    const members = group ? characters.filter(c => group.members.includes(c.avatar)) : [];
+    const {characters} = context();
+    const members = getChatMembers();
     let character;
 
     search = String(search).trim();
@@ -48,15 +67,8 @@ function findCharacter(search, {allowAvatar = true} = {}) {
     if (!character) character = members.find(m => m.name === search);
     if (!character) character = characters.find(c => c.name === search);
 
-    if (!character) {
-        const statuses = Presence.ext('StatUsMaximus').getAvatarMap();
-
-        character = statuses.get(search)?.getCharacter();
-    }
-
     return character;
 }
-
 
 const ENUMS_PROVIDER = {
     characters: function() {
@@ -64,8 +76,7 @@ const ENUMS_PROVIDER = {
     },
 
     status: function() {
-        return Presence.ext('StatUsMaximus')
-            .getAvatarMap()
+        return Presence.getStatusAvatarMap()
             .values()
             .map(s => new SlashCommandEnumValue(s.avatar, s.name));
     },

@@ -24,7 +24,7 @@ function initialize() {
             if (!isActive()) return '';
 
             const validMsgId = String(messageId ?? '').trim() !== '';
-            const statuses = Presence.ext('StatUsMaximus').getAvatarMap({onlyEnabled: false});
+            const statuses = Presence.getStatusAvatarMap({onlyEnabled: false});
             const characters = context().characters;
             let participants = [];
 

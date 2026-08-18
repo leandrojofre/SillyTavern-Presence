@@ -87,7 +87,7 @@ const commonTrackingButtonSettings = {
         title: 'The character is present',
     },
     on_status_detached: {
-        title: 'This character will only see the messages where the currently active detached Status blocks are present',
+        title: 'This character will only see the messages where the currently active Status blocks are present',
     },
     ignore: {
         title: 'Presence ignored',
@@ -225,10 +225,10 @@ function getCurrentParticipants() {
 	if (!group) return { members: [], present: [] };
 
 	let active = [...group.members];
-    const statuses = Presence.ext('StatUsMaximus').getAvatarMap();
+    const statuses = Presence.getStatusAvatarMap();
 
     for (const [avatar, status] of statuses) {
-        if (status.enabled) active.push(avatar);
+        active.push(avatar);
     }
 
     if (chatMetadata[MetadataMap.universalTrackerOn])
@@ -238,7 +238,7 @@ function getCurrentParticipants() {
 		active = active.filter(char => !group.disabled_members.includes(char));
 
 	Object
-    .entries(Presence.metadata('char_mode'))
+    .entries(Presence.metadata('char_mode') || {})
     .forEach(([char, mode]) => {
 		if (mode === 'ignore' && active.includes(char))
             active.splice(active.indexOf(char), 1);
@@ -255,7 +255,7 @@ function getCurrentParticipants() {
  * @param {Map<string, StatUsMaximus.Status>} [options.statuses]
  */
 function getAvatarImage(file, {statuses = null} = {}) {
-    statuses = statuses ?? Presence.ext('StatUsMaximus').getAvatarMap();
+    statuses = statuses ?? Presence.getStatusAvatarMap({onlyEnabled: false});
 
     const thumbnail = statuses.has(file) ? statuses.get(file).getThumbnail() : getThumbnailUrl('avatar', file);
 
@@ -286,7 +286,7 @@ export async function addPresenceTrackerToMessages(refresh = false) {
     const elements = $(selector).toArray();
 	const chat = context().chat;
     const members = getCurrentParticipants().members;
-    const statuses = Presence.ext('StatUsMaximus').getAvatarMap();
+    const statuses = Presence.getStatusAvatarMap();
 
     for (const element of elements) {
         const mesId = $(element).attr('mesid');
@@ -342,7 +342,7 @@ export async function addPresenceTrackerToMessages(refresh = false) {
  * @param {ChatMessageExtended} message
  * @param {Object} [options]
  * @param {string} [options.avatar] If provided, the avatar of the character for which the message's presence should be checked.
- * @param {Map<string, StatUsMaximus.Status>} [options.statuses] If provided, filters using this Status map
+ * @param {Map<string, StatUsMaximus.Status>} [options.statuses] If provided, filters using this status IDs
  * @returns {boolean} Whether the message should be unhidden
  */
 function canToggleVisibility(message, {avatar = null, statuses = new Map()} = {}) {
@@ -355,7 +355,7 @@ function canToggleVisibility(message, {avatar = null, statuses = new Map()} = {}
     if (!avatar || universalPresent) return true;
 
     const charModes = Presence.metadata('char_mode');
-    const presenceMode = charModes[avatar];
+    const presenceMode = charModes[avatar] || 'present';
 
     if (presenceMode === 'ignore') return true;
 
@@ -382,7 +382,7 @@ function getMessageIdChunks(avatar = null) {
 
     /** @type {MessageIdChunk[]} */
 	const messageIdChunks = [];
-	const statuses = Presence.ext('StatUsMaximus').getAvatarMap();
+	const statuses = Presence.getStatusAvatarMap({onlyDetached: false, onlyGroup: true});
 	let current_chunk = 0;
 
 	for (const [i, mess] of chat.entries()) {
@@ -507,11 +507,12 @@ function updatePresenceTrackingButton(member) {
 
     if (!character?.avatar) return;
 
-    const mode = charModes[character.avatar];
+    const avatar = character.avatar;
+    const mode = avatar in charModes ? charModes[avatar] : 'present';
 
     target.toggleClass('presence_ignore_shadow', mode === 'ignore');
     target.toggleClass('presence_on_status_shadow', mode === 'on_status_detached');
-    target.attr('title', commonTrackingButtonSettings[mode].title);
+    target.attr('title', commonTrackingButtonSettings[mode]?.title || '');
 }
 
 function togglePresenceTracking(e) {
@@ -556,9 +557,12 @@ globalThis.Presence = {
     },
     metadata(key, value) {
         const { chatMetadata } = context();
-        const metadata = structuredClone(defaultMetadata);
+        const metadataExists = 'presence_extension' in chatMetadata;
 
-        Object.assign(metadata, chatMetadata.presence_extension ?? {});
+        const metadata = Object.assign({},
+            structuredClone(defaultMetadata),
+            metadataExists ? chatMetadata.presence_extension : {},
+        );
 
         if (value) metadata[key] = value;
 
@@ -571,6 +575,29 @@ globalThis.Presence = {
 
         presenceModes.set(from, mode);
         presenceModes.set(mode, to);
+    },
+    getStatusAvatarMap({onlyEnabled = true, onlyDetached = true, onlyGroup = false} = {}) {
+        const ext = Presence.ext('StatUsMaximus');
+
+        if (!ext.enabled) return new Map();
+
+        /** @type {Map<string, StatUsMaximus.Status>} */
+        const avatarMap = new Map();
+        const statuses = ext.call('getStatuses') || [];
+
+        const { groupId, groups, characterId, characters } = context();
+        const character = characterId ? characters.at(Number(characterId)).avatar : '';
+        const group = groups.find(g => g.id === groupId)?.members || [character];
+
+        for (const s of statuses) {
+            if (onlyEnabled && !s.enabled) continue;
+            if (onlyDetached && !s.is_detached) continue;
+            if (onlyGroup && !s.is_detached && !group.includes(s.avatar)) continue;
+
+            avatarMap.set(s.avatar, s);
+        }
+
+        return avatarMap;
     },
 	toggleVisibilityAllMessages,
 	hideChatMessageRange,

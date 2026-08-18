@@ -1,4 +1,3 @@
-/** @typedef {Presence.PresenceModes} PresenceModes */
 /** @typedef {Presence.GlobalInterfaceExtensions} GlobalInterfaceExtensions */
 
 /**
@@ -48,28 +47,5 @@ export class ExternalExtension {
         if (!value) return;
         if (typeof value === 'function') return;
         return value;
-    }
-
-    /**
-     * @param {Object} [options]
-     * @param {boolean} [options.onlyEnabled]
-     * @param {boolean} [options.onlyDetached]
-     * @returns {Map<string, StatUsMaximus.Status>}
-     */
-    getAvatarMap({onlyEnabled = true, onlyDetached = true} = {}) {
-        if (!this.enabled || this.key !== 'StatUsMaximus') return new Map();
-
-        /** @type {Map<string, StatUsMaximus.Status>} */
-        const avatarMap = new Map();
-        const statuses = Presence.ext('StatUsMaximus').call('getStatuses') || [];
-
-        for (const s of statuses) {
-            if (onlyEnabled && !s.enabled) continue;
-            if (onlyDetached && !s.is_detached) continue;
-
-            avatarMap.set(s.avatar, s);
-        }
-
-        return avatarMap;
     }
 }
