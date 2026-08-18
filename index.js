@@ -513,8 +513,7 @@ function updatePresenceTrackingButton(member) {
     const avatar = character.avatar;
     const mode = avatar in charModes ? charModes[avatar] : 'present';
 
-    target.toggleClass('presence_ignore_shadow', mode === 'ignore');
-    target.toggleClass('presence_on_group_shadow', mode === 'on_group_present');
+    target.attr('mode', mode || '');
     target.attr('title', commonTrackingButtonSettings[mode]?.title || '');
 }
 

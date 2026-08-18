@@ -158,13 +158,13 @@
     filter: brightness(2) var(--shadow);
 }
 
-#rm_group_members .presence_ignore_shadow {
+#rm_group_members .ignore_presence_toggle[mode="ignore"] {
     --shadow: drop-shadow(0px 0px 5px rgb(243, 65, 65));
 	opacity: 1;
 	filter: var(--shadow);
 }
 
-#rm_group_members .presence_on_group_shadow {
+#rm_group_members .ignore_presence_toggle[mode="on_group_present"] {
     --shadow: drop-shadow(0px 0px 5px rgb(210, 243, 65));
 	opacity: 1;
 	filter: var(--shadow);
