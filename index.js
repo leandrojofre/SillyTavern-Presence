@@ -1,5 +1,5 @@
 import {saveChatDebounced} from '../../../../script.js';
-import {is_group_generating} from '../../../../scripts/group-chats.js';
+import {ExternalExtension} from './src/classes/ExternalExtension.js';
 import * as eventListeners from './src/js/eventListeners.js';
 import * as slashCommands from './src/js/slashCommands.js';
 import * as presenceMacros from './src/js/macros.js';
@@ -14,16 +14,28 @@ export {
 	eventTypes,
 	eventSource,
 	saveChatDebounced,
+    updatePresenceTrackingButton,
+    toggleVisibilityAllMessages,
+    hideChatMessageRange,
+    getUniqueArray,
+    getMessageIdChunks,
+    htmlPrefix,
+    extensionSettings,
+    metadataName,
 	t,
 }
 
 // @ts-check
 
+/** @typedef {Presence.SillyTavernContext} SillyTavernContext */
 /** @typedef {Presence.ChatMessageExtended} ChatMessageExtended */
 /** @typedef {Presence.ExtensionSettings} ExtensionSettings */
 /** @typedef {Presence.MessageIdChunk} MessageIdChunk */
 /** @typedef {Presence.HTMLTemplateGetOptions} HTMLTemplateGetOptions */
+/** @typedef {Presence.PresenceModes} PresenceModes */
+/** @typedef {Presence.CommonTrackingButtonSetting} CommonTrackingButtonSetting */
 
+/** @type {() => SillyTavernContext} */
 const context = SillyTavern.getContext;
 
 const {
@@ -33,15 +45,17 @@ const {
 	extensionSettings: extension_settings,
 	swipe,
 	saveMetadataDebounced,
+    getThumbnailUrl,
 	t
 } = context();
 
 
 const extensionName = 'Presence';
 const extensionFullName = `SillyTavern-${extensionName}`;
-const metadataName = extensionName.toLowerCase().replaceAll('-', '_');
-const htmlSuffix = extensionName.toLowerCase();
+const metadataName = extensionName.toLowerCase().replaceAll('-', '_') + '_extension';
+const htmlPrefix = extensionName.toLowerCase();
 const extensionFolderPath = `scripts/extensions/third-party/${extensionFullName}`;
+const defaultAvatarIcon = 'img/quill.png';
 
 /** @type {ExtensionSettings} */
 const extensionSettings = extension_settings[extensionName];
@@ -53,12 +67,35 @@ const defaultSettings = {
 	seeLast: true,
 	includeMuted: false,
     disableTransition: false,
+    minMessageDisplay: 0,
 	debug: false,
+};
+
+/** @type {Presence.ExtensionMetadata} */
+const defaultMetadata = {
+    char_mode: {},
 };
 
 const MetadataMap = {
 	universalTrackerOn: 'universal_tracker_on',
-}
+    universalTrackerLabel: 'presence_universal_tracker',
+};
+
+/** @type {Record<PresenceModes, CommonTrackingButtonSetting>} */
+const commonTrackingButtonSettings = {
+    present: {
+        title: 'The character is present',
+    },
+    on_group_present: {
+        title: 'This character will only see the messages where the currently active characters are present',
+    },
+    ignore: {
+        title: 'Presence ignored',
+    },
+};
+
+/** @type {Map<PresenceModes, PresenceModes>} */
+const presenceModes = new Map();
 
 // * MARK:Debug
 
@@ -171,6 +208,14 @@ function isActive() {
 	return context().groupId != null && extensionSettings.enabled;
 }
 
+/**
+ * @param {any[]} array
+ * @param {(v: any) => boolean} [filter]
+ */
+function getUniqueArray(array, filter = (v) => true) {
+    return new Set(array).values().toArray().filter(filter);
+}
+
 // * MARK:Features
 
 function getCurrentParticipants() {
@@ -179,59 +224,46 @@ function getCurrentParticipants() {
 
 	if (!group) return { members: [], present: [] };
 
-	var active = [...group.members];
+	let active = [...group.members];
+    const statuses = Presence.getStatusAvatarMap();
 
-    if (chatMetadata[MetadataMap.universalTrackerOn]) active.push('presence_universal_tracker');
+    for (const [avatar, status] of statuses) {
+        active.push(avatar);
+    }
+
+    if (chatMetadata[MetadataMap.universalTrackerOn])
+        active.push('presence_universal_tracker');
 
 	if (!extensionSettings.includeMuted)
 		active = active.filter(char => !group.disabled_members.includes(char));
 
-	if (!chatMetadata.ignore_presence) chatMetadata.ignore_presence = [];
-
-	chatMetadata.ignore_presence.forEach(char => {
-		if (active.includes(char)) active.splice(active.indexOf(char), 1);
+	Object
+    .entries(Presence.metadata('char_mode') || {})
+    .forEach(([char, mode]) => {
+		if (mode === 'ignore' && active.includes(char))
+            active.splice(active.indexOf(char), 1);
 	});
+
+    active = getUniqueArray(active, (m) => m?.length);
 
 	return { members: group.members, present: active };
 }
 
-export async function onNewMessage(mesId) {
-	if (!isActive()) return;
+/**
+ * @param {string} file
+ * @param {Object} [options]
+ * @param {Map<string, StatUsMaximus.Status>} [options.statuses]
+ */
+function getAvatarImage(file, {statuses = null} = {}) {
+    statuses = statuses ?? Presence.getStatusAvatarMap({onlyEnabled: false});
 
-	/** @type {ChatMessageExtended[]} */
-	const chat = context().chat;
-	const mes = chat[mesId];
-    const participants = await getCurrentParticipants();
-	const { this_chid, characters } = context();
+    const thumbnail = statuses.has(file) ? statuses.get(file).getThumbnail() : getThumbnailUrl('avatar', file);
 
-	const thumbnail = new URL(mes.force_avatar, window.location.origin);
-	const urlType = thumbnail?.searchParams?.get('type') ?? '';
-	const urlFile = thumbnail?.searchParams?.get('file') ?? '';
-	const isUser = urlType === 'persona';
+    return {thumbnail, fallback: () => {
+        const status = Presence.ext('StatUsMaximus').call('getStatus', file) || {getThumbnail: () => defaultAvatarIcon};
 
-    if (this_chid !== undefined && !isUser && urlFile) {
-        const character = characters[this_chid];
-		const isCharMessage = urlFile === character.avatar || mes.original_avatar === character.avatar;
-	    const isCharActive = participants.present.includes(character.avatar);
-
-        if (isCharMessage && !isCharActive) mes.present = character?.avatar ? [character.avatar] : [];
-        else mes.present = structuredClone(participants.present);
-    } else {
-        mes.present = structuredClone(participants.present);
-    }
-
-	if(extensionSettings.seeLast && !mes.is_user) {
-		/** @type {ChatMessageExtended} */
-		const prevMes = chat[mesId - 1];
-
-		if(!prevMes.present) prevMes.present = [];
-
-		if(!prevMes.present.includes(mes.original_avatar)){
-			prevMes.present.push(mes.original_avatar);
-		}
-	}
-
-	await saveChatDebounced();
+        return status.getThumbnail();
+    }};
 }
 
 /**
@@ -250,122 +282,94 @@ export async function addPresenceTrackerToMessages(refresh = false) {
 
 	if (!isActive()) return;
 
-	let selector = "#chat .mes:not(.smallSysMes,[has_presence_tracker=true])";
+	const selector = '#chat .mes:not(.smallSysMes, [has_presence_tracker="true"])';
     const elements = $(selector).toArray();
 	const chat = context().chat;
+    const members = getCurrentParticipants().members;
+    const statuses = Presence.getStatusAvatarMap();
 
     for (const element of elements) {
-        const mesId = $(element).attr("mesid");
+        const mesId = $(element).attr('mesid');
         const mes = chat[mesId];
 
-        if (mes.present == undefined)
-            mes.present = [];
-        else mes.present = [...new Set(mes.present)];
+        mes.present = getUniqueArray(mes.present ?? []);
 
-        const mesPresence = mes.present;
-        const members = (await getCurrentParticipants()).members;
-        const trackerMembers = members.concat(mesPresence.filter((m) => !members.includes(m))).sort();
-        const presenceTracker = $('<div class="mes_presence_tracker"></div>');
+        const trackerMembers = getUniqueArray([
+            ...members,
+            ...mes.present,
+            ...statuses.keys(),
+        ]).sort();
 
-        if (!presenceTracker.first().hasClass('universal')) {
-            const universalTracker = $('<div class="presence_icon universal"><div class="fa-solid fa-universal-access interactable" title="Universal Tracker"></div></div>');
+        const presenceTracker = await HTML_TEMPLATES.get('trackerChat', {clone: true});
 
-            universalTracker.on("click", (e) => {
-                const target = $(e.target).closest(".presence_icon");
-                if (target.hasClass("present")) {
-                    target.removeClass("present");
-                    updateMessagePresence(mesId, "presence_universal_tracker", false);
-                } else {
-                    target.addClass("present");
-                    updateMessagePresence(mesId, "presence_universal_tracker", true);
-                }
-            });
+        for (const member of trackerMembers) {
+            if (!member) continue;
 
-            presenceTracker.prepend(universalTracker);
-        }
+            const isPresent = mes.present.includes(member);
 
-        trackerMembers.forEach((member) => {
-            const isPresent = mesPresence.includes(member);
-
-            if (member === "presence_universal_tracker") {
-                if (isPresent) presenceTracker.find('.universal').addClass("present");
-                return;
+            if (member === MetadataMap.universalTrackerLabel) {
+                presenceTracker.find('.universal').toggleClass('present', isPresent);
+                presenceTracker.find('.universal').data('member', member);
+                continue;
             }
 
-            const memberIcon = $('<div class="presence_icon' + (isPresent ? " present" : "") + '"><img src="/thumbnail?type=avatar&amp;file=' + member + '"></div>');
+            const memberIcon = await HTML_TEMPLATES.get('trackerChatMember', {clone: true});
+            const avatarImg = getAvatarImage(member, {statuses});
+            const title = statuses.has(member) ? statuses.get(member).name : member;
 
-            memberIcon.on("click", (e) => {
-                const target = $(e.target).closest(".presence_icon");
-                if (target.hasClass("present")) {
-                    target.removeClass("present");
-                    updateMessagePresence(mesId, member, false);
-                } else {
-                    target.addClass("present");
-                    updateMessagePresence(mesId, member, true);
-                }
-            });
+            memberIcon.data('member', member);
+            memberIcon.attr('title', title);
+            memberIcon.toggleClass('present', isPresent);
+            memberIcon.find('.presence_avatar').one('error', {fallback: avatarImg.fallback}, function (e) {
+                $(e.target).off('error');
+                $(e.target).attr('src', e.data.fallback());
+            }).attr('src', avatarImg.thumbnail)
 
             presenceTracker.append(memberIcon);
-        });
+        };
 
-        if (element.hasAttribute("has_presence_tracker")) return;
-        if (extensionSettings.location == "top") $(".mes_block > .ch_name > .flex1", element).append(presenceTracker);
-        else if (extensionSettings.location == "bottom") $(".mes_block", element).append(presenceTracker);
-        element.setAttribute("has_presence_tracker", "true");
+        if (extensionSettings.location == 'top')
+            $(element).find('.mes_block > .ch_name > .flex1').append(presenceTracker);
+
+        if (extensionSettings.location == 'bottom')
+            $(element).find('.mes_block').append(presenceTracker);
+
+        $(element).attr('has_presence_tracker', 'true');
     };
-}
-
-export async function onChatChanged({forceUpdate = false} = {}) {
-	// @ts-ignore
-	$(document).off('mouseup touchend', '#show_more_messages', addPresenceTrackerToMessages);
-
-	if (!isActive()) return;
-	await addPresenceTrackerToMessages(forceUpdate);
-
-	$('#rm_group_members .group_member').each((index, element) => {
-		updatePresenceTrackingButton($(element));
-	});
-
-	// @ts-ignore
-	$(document).on('mouseup touchend', '#show_more_messages', addPresenceTrackerToMessages);
-}
-
-export async function onGenerationAfterCommands(type, config, dryRun) {
-	if (!isActive() && !is_group_generating) return;
-
-	async function draftHandler(...args) {
-        eventSource.removeListener(eventTypes.GENERATION_STOPPED, stopHandler);
-		return await onGroupMemberDrafted(type, args[0]);
-	}
-
-	async function stopHandler() {
-		eventSource.removeListener(eventTypes.GROUP_MEMBER_DRAFTED, draftHandler);
-	}
-
-	eventSource.once(eventTypes.GROUP_MEMBER_DRAFTED, draftHandler);
-	eventSource.once(eventTypes.GENERATION_STOPPED,stopHandler);
 }
 
 /**
  * @param {ChatMessageExtended} message
  * @param {Object} [options]
- * @param {string|null} [options.avatar] If provided, the avatar of the character for which the message's presence should be checked.
- * @returns {boolean} Whether the message should be hidden or not according
+ * @param {string} [options.avatar] If provided, the avatar of the character for which the message's presence should be checked.
+ * @param {string[]} [options.present]
+ * @returns {boolean} Whether the message should be unhidden
  */
-function canToggleHideMessage(message, {avatar = null} = {}) {
-	const present = message.present ?? [];
-	const charIsPresent = present.includes(avatar) || present.includes('presence_universal_tracker');
+function canToggleVisibility(message, {avatar = null, present = []} = {}) {
+	if (!message.is_system) delete message.presence_manually_hidden;
+	if (message?.presence_manually_hidden) return false;
 
-	const hasManuallyHiddenFlag = 'presence_manually_hidden' in message;
-	const forceManualToggleOff = message.presence_manually_hidden && !message.is_system;
+	const messPresent = message.present ?? [];
+    const universalPresent = messPresent.includes(MetadataMap.universalTrackerLabel);
 
-	if (forceManualToggleOff && hasManuallyHiddenFlag)
-		message.presence_manually_hidden = false;
+    if (!avatar || universalPresent)
+        return true;
 
-	if (message.presence_manually_hidden) return false;
-	if (!charIsPresent && avatar !== null) return false;
+    const charModes = Presence.metadata('char_mode');
+    const presenceMode = charModes[avatar] || 'present';
 
-	return true;
+    if (presenceMode === 'ignore')
+        return true;
+
+    const avatarPresent = messPresent.includes(avatar);
+
+    if (presenceMode === 'present' && avatarPresent)
+        return true;
+
+    if (presenceMode === 'on_group_present' && avatarPresent)
+        return messPresent.some(p => p !== avatar && present.includes(p));
+
+	return false;
 }
 
 /**
@@ -373,31 +377,38 @@ function canToggleHideMessage(message, {avatar = null} = {}) {
  * @returns {MessageIdChunk[]} An array of message ID ranges that can be hidden by Presence.
  */
 function getMessageIdChunks(avatar = null) {
-	/** @type {ChatMessageExtended[]} */
-	const chat = context().chat;
+	const chatFull = context().chat || [];
+    const minMessageDisplay = extensionSettings.minMessageDisplay;
+    const chat = avatar ? chatFull.slice(minMessageDisplay) : chatFull;
 
-	if (!chat || !chat.length) return [];
+	if (!chat.length) return [];
 
-	/** @type {MessageIdChunk[]} */
-	const messageIdChunks = [{}];
+    /** @type {MessageIdChunk[]} */
+	const messageIdChunks = [];
+    const present = getCurrentParticipants().present;
 	let current_chunk = 0;
 
-	for (const [mesId, mess] of chat.entries()) {
-		if (!canToggleHideMessage(mess, {avatar})) continue;
+	for (const [i, mess] of chat.entries()) {
+        const canToggle = canToggleVisibility(mess, {avatar, present});
+
+		if (!canToggle) continue;
+        if (!messageIdChunks.length) messageIdChunks.push({});
 
 		const chunk = messageIdChunks[current_chunk];
 		const hasStart = 'start' in chunk;
+        const mesID = avatar ? minMessageDisplay + i : i;
 
 		if (!hasStart) {
-			chunk.start = mesId;
-			chunk.end = mesId;
-		} else if (chunk.end + 1 === mesId) {
-			chunk.end = mesId;
+			chunk.start = mesID;
+			chunk.end = mesID;
+		} else if (chunk.end + 1 === mesID) {
+			chunk.end = mesID;
 		} else {
 			current_chunk++;
+
 			messageIdChunks.push({
-				start: mesId,
-				end: mesId,
+				start: mesID,
+				end: mesID,
 			});
 		}
 	};
@@ -412,7 +423,7 @@ function getMessageIdChunks(avatar = null) {
  * @param {boolean} [saveChat] Whether to save the chat after toggling message visibility.
  * @returns {Promise<void>}
  */
-export function hideChatMessageRange(idChunk, unhide, saveChat = true) {
+function hideChatMessageRange(idChunk, unhide, saveChat = true) {
 	let { start, end } = idChunk;
 
 	if (isNaN(start)) return;
@@ -444,15 +455,16 @@ export function hideChatMessageRange(idChunk, unhide, saveChat = true) {
  * @param {boolean} saveChat
  * @returns {void}
  */
-export function toggleVisibilityAllMessages(unhide = false, saveChat = true) {
+function toggleVisibilityAllMessages(unhide = false, saveChat = true) {
 	if (!isActive()) return;
 
 	const messageIdChunks = getMessageIdChunks();
 
 	for (const idChunk of messageIdChunks) {
-		log({idChunk, unhide});
-		hideChatMessageRange(idChunk, unhide, saveChat);
+		hideChatMessageRange(idChunk, unhide, false);
 	}
+
+    if (saveChat) saveChatDebounced();
 }
 
 /**
@@ -461,136 +473,177 @@ export function toggleVisibilityAllMessages(unhide = false, saveChat = true) {
  * @param {boolean} isPresent
  */
 function updateMessagePresence(mesId, member, isPresent) {
-	/** @type {ChatMessageExtended} */
-	const mes = context().chat[mesId];
-	if (!mes.present) mes.present = [];
+	const { chat } = context();
+	const mes = chat.at(Number(mesId));
+
+	mes.present = mes.present || [];
 
 	if (isPresent) {
 		mes.present.push(member);
-        mes.present = [...new Set(mes.present)];
+        mes.present = getUniqueArray(mes.present);
 	} else {
-		mes.present = mes.present.filter((m) => m != member);
+		mes.present = getUniqueArray(mes.present, (m) => m != member);
 	}
 
 	saveChatDebounced();
-}
-
-/**
- * @param {string} type Generation type
- * @param {number|string} charId
- * @returns {void}
- */
-function onGroupMemberDrafted(type, charId) {
-	if (!isActive()) return;
-
-	const { chat, characters, chatMetadata } = context();
-
-	/** @type {ChatMessageExtended} */
-	const lastMessage = chat[chat.length - 1];
-	const isUserContinue = (type === "continue" && lastMessage.is_user);
-	const avatar = characters[charId].avatar || null;
-
-	if (
-		type == 'impersonate' ||
-		isUserContinue ||
-		chatMetadata.ignore_presence?.includes(avatar)
-	) {
-        toggleVisibilityAllMessages(true);
-	} else {
-		toggleVisibilityAllMessages(false, false);
-
-		const messageIdChunks = getMessageIdChunks(avatar);
-
-		for (const idChunk of messageIdChunks) {
-			hideChatMessageRange(idChunk, true, false);
-		}
-
-        if (extensionSettings.seeLast) {
-            const lastMessageID = chat.length - 1;
-            hideChatMessageRange({start: lastMessageID}, true, false);
-        }
-
-		saveChatDebounced();
-	}
-}
-
-async function togglePresenceTracking(e) {
-	const target = $(e.target).closest(".group_member");
-	const charId = target.data("chid");
-	const charAvatar = context().characters[charId].avatar;
-	const chatMetadata = context().chatMetadata;
-
-	const ignorePresence = chatMetadata.ignore_presence ?? [];
-
-	if (!ignorePresence.includes(charAvatar)) {
-		if (!chatMetadata.ignore_presence) chatMetadata.ignore_presence = [];
-		chatMetadata.ignore_presence.push(charAvatar);
-	} else {
-		chatMetadata.ignore_presence = ignorePresence.filter((c) => c != charAvatar);
-	}
-
-	saveChatDebounced();
-	updatePresenceTrackingButton(target);
 }
 
 function toggleMessagesManuallyHiddenFlag(e) {
-	const $mess = $(e.target).closest(".mes");
-	const mesId = $mess.attr("mesid");
-	const isHiding = $(e.target).hasClass("mes_hide");
-
-	/** @type {ChatMessageExtended} */
-	const mes = context().chat[mesId];
+	const { chat } = context();
+	const $mess = $(e.target).closest('.mes');
+	const mesId = $mess.attr('mesid');
+	const isHiding = $(e.target).hasClass('mes_hide');
+	const mes = chat.at(Number(mesId));
 
 	mes.presence_manually_hidden = isHiding;
 
 	saveChatDebounced();
 }
 
-async function updatePresenceTrackingButton(member) {
-	if (!isActive()) return;
+function updatePresenceTrackingButton(member) {
+	if (!isActive() || !member) return;
 
-	const target = member.find(".ignore_presence_toggle");
-	const charId = member.data("chid");
-	const characters = context().characters;
-	const chatMetadata = context().chatMetadata;
+	const target = $(member).find('.ignore_presence_toggle');
+	const charId = $(member).data('chid');
+	const character = context().characters[charId];
+	const charModes = Presence.metadata('char_mode');
 
-	if (!chatMetadata?.ignore_presence?.includes(characters[charId].avatar)) {
-		target.removeClass("active");
-	} else {
-		target.addClass("active");
-	}
+    if (!character?.avatar) return;
+
+    const avatar = character.avatar;
+    const mode = avatar in charModes ? charModes[avatar] : 'present';
+
+    target.attr('mode', mode || '');
+    target.attr('title', commonTrackingButtonSettings[mode]?.title || '');
 }
 
+function togglePresenceTracking(e) {
+	const target = $(e.target).closest('.group_member');
+	const charId = target.data('chid');
+	const charAvatar = context().characters[charId].avatar;
+	const charModes = Presence.metadata('char_mode');
+    const nextMode = presenceModes.get(charModes[charAvatar]) || 'ignore';
+
+    charModes[charAvatar] = nextMode;
+    Presence.metadata('char_mode', charModes);
+
+	saveChatDebounced();
+	updatePresenceTrackingButton(target);
+}
+
+function toggleMessageIcon(e) {
+    const target = $(e.target).closest('.presence_icon');
+    const mesId = $(e.target).closest('.mes')?.attr('mesid');
+    const isPresent = target.hasClass('present');
+    const member = target.data('member');
+
+    if (!mesId || !member) return;
+
+    target.toggleClass('present', !isPresent);
+    updateMessagePresence(mesId, member, !isPresent);
+}
+
+/**
+ * MARK:Interface
+ * @type {Presence.GlobalInterface}
+ */
 globalThis.Presence = {
+    extensions: {},
+    ext(key) {
+        const exists = key in Presence.extensions;
+
+        // @ts-ignore
+        if (!exists) Presence.extensions[key] = new ExternalExtension(key);
+
+        return Presence.extensions[key];
+    },
+    metadata(key, value) {
+        const { chatMetadata } = context();
+        const metadataExists = 'presence_extension' in chatMetadata;
+
+        const metadata = Object.assign({},
+            structuredClone(defaultMetadata),
+            metadataExists ? chatMetadata.presence_extension : {},
+        );
+
+        if (value) metadata[key] = value;
+
+        chatMetadata.presence_extension = metadata;
+
+        return metadata[key];
+    },
+    addPresenceMode(mode) {
+        const [from, to] = presenceModes.entries().toArray().pop();
+
+        presenceModes.set(from, mode);
+        presenceModes.set(mode, to);
+    },
+    getStatusAvatarMap({onlyEnabled = true, onlyDetached = true, onlyGroup = false} = {}) {
+        const ext = Presence.ext('StatUsMaximus');
+
+        if (!ext.enabled) return new Map();
+
+        /** @type {Map<string, StatUsMaximus.Status>} */
+        const avatarMap = new Map();
+        const statuses = ext.call('getStatuses') || [];
+
+        const { groupId, groups, characterId, characters } = context();
+        const character = characterId ? characters.at(Number(characterId)).avatar : '';
+        const group = groups.find(g => g.id === groupId)?.members || [character];
+
+        for (const s of statuses) {
+            if (onlyEnabled && !s.enabled) continue;
+            if (onlyDetached && !s.is_detached) continue;
+            if (onlyGroup && !s.is_detached && !group.includes(s.avatar)) continue;
+
+            avatarMap.set(s.avatar, s);
+        }
+
+        return avatarMap;
+    },
 	toggleVisibilityAllMessages,
 	hideChatMessageRange,
 	getMessageIdChunks,
+    log,
+    debug,
+    error,
 	extensionName,
+    presenceModes,
 };
 
 // * MARK:Extension Settings
 
 const settingsCallbacks = {
-    /**	Triggers on enabled setting change. */
-    enabled: () => {
+    enabled() {
         // Nothing by the moment
     },
 
-	location: function () {
+	location() {
 		addPresenceTrackerToMessages(true);
 	},
 
-	disableTransition: function () {
+	disableTransition() {
 		$('#chat').toggleClass('no-presence-animations', extensionSettings.disableTransition);
 	},
 }
 
+/**
+ * @param {JQuery|HTMLElement} element
+ * @returns {{callback: Function; setting: string;}}
+ */
+function getSettingInputCallback(element) {
+    const $target = $(element);
+    const setting = $target.attr(`${htmlPrefix}-setting`);
+    const callback = settingsCallbacks[setting];
+
+    return {callback, setting};
+}
+
 /** Changes a setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsBooleanButton(event) {
-    const target = event.target;
-    const value = Boolean($(target).prop('checked'));
-    const setting = target.getAttribute(`${htmlSuffix}-setting`);
-    const callback = settingsCallbacks[setting];
+    const $target = $(event.target);
+    const {callback, setting} = getSettingInputCallback($target);
+    const value = Boolean($target.prop('checked'));
 
     extensionSettings[setting] = value;
 
@@ -602,11 +655,17 @@ function settingsBooleanButton(event) {
 
 /** Changes a string setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsTextButton(event) {
-    const target = event.target;
-    const value = String($(target).val());
+    const $target = $(event.target);
+    const {callback, setting} = getSettingInputCallback($target);
+    const value = String($target.val());
+    const pattern = String($target.attr('pattern') || '');
 
-    const setting = target.getAttribute(`${htmlSuffix}-setting`);
-    const callback = settingsCallbacks[setting];
+    if (pattern) {
+        const regex = new RegExp(pattern);
+        const isValid = regex.test(value);
+
+        if (!isValid) return;
+    }
 
     extensionSettings[setting] = value;
 
@@ -618,23 +677,27 @@ function settingsTextButton(event) {
 
 /** Changes a number setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsNumberButton(event) {
-    const target = /** @type {HTMLInputElement} */ (event.target);
-    const raw_value = isNaN(target.valueAsNumber) ? 0 : target.valueAsNumber;
-    const insideMinBoundary = (target.min !== '') ? (Number(target.min) <= raw_value) : true;
-    const insideMaxBoundary = (target.max !== '') ? (Number(target.max) >= raw_value) : true;
+    const target = /** @type {HTMLSelectElement} */(event.target);
+    const {callback, setting} = getSettingInputCallback(target);
+
+    const defValue = defaultSettings[setting];
+    const raw_value = isNaN(Number(target.value)) ? defValue : Number(target.value);
+    const min = Number(target.getAttribute('min') || raw_value);
+    const max = Number(target.getAttribute('max') || raw_value);
+
+    const insideMinBoundary = min <= raw_value;
+    const insideMaxBoundary = max >= raw_value;
 
     let value = raw_value;
 
-    if (!insideMinBoundary) value = Number(target.min);
-    if (!insideMaxBoundary) value = Number(target.max);
-
-    const setting = target.getAttribute(`${htmlSuffix}-setting`);
-    const callback = settingsCallbacks[setting];
+    if (!insideMinBoundary) value = min;
+    if (!insideMaxBoundary) value = max;
 
     extensionSettings[setting] = value;
 
     if (callback) callback();
 
+    $(target).val(value);
     log('toggleSetting ' + setting, value);
     saveSettingsDebounced();
 }
@@ -651,27 +714,28 @@ function displaySettings() {
 async function loadSettingsMenu() {
     const settingsHtml = await HTML_TEMPLATES.get('settings');
 
-    // extensions_settings2 is an alternative
     $('#extensions_settings').append(settingsHtml);
 
-    $(`#${htmlSuffix}-enabled`).on('input', settingsBooleanButton);
+    $(`#${htmlPrefix}-enabled`).on('input', settingsBooleanButton);
 
-	$(`#${htmlSuffix}-location`).on('change', settingsTextButton);
-	$(`#${htmlSuffix}-see-last`).on('input', settingsBooleanButton);
-	$(`#${htmlSuffix}-include-muted`).on('input', settingsBooleanButton);
-	$(`#${htmlSuffix}-disable-transition`).on('input', settingsBooleanButton);
+	$(`#${htmlPrefix}-location`).on('change', settingsTextButton);
+	$(`#${htmlPrefix}-see-last`).on('input', settingsBooleanButton);
+	$(`#${htmlPrefix}-include-muted`).on('input', settingsBooleanButton);
+	$(`#${htmlPrefix}-disable-transition`).on('input', settingsBooleanButton);
+	$(`#${htmlPrefix}-min-message-display`).on('input', settingsNumberButton);
 
-    $(`#${htmlSuffix}-debug`).on('input', settingsBooleanButton);
-    $(`#${htmlSuffix}-check-configuration`).on('click', displaySettings);
+    $(`#${htmlPrefix}-debug`).on('input', settingsBooleanButton);
+    $(`#${htmlPrefix}-check-configuration`).on('click', displaySettings);
 
     log('Settings menu created');
 
-    $(`#${htmlSuffix}-enabled`).prop('checked', extensionSettings.enabled).trigger('input');
-    $(`#${htmlSuffix}-location`).val(extensionSettings.location).trigger('change');
-    $(`#${htmlSuffix}-see-last`).prop('checked', extensionSettings.seeLast).trigger('input');
-    $(`#${htmlSuffix}-include-muted`).prop('checked', extensionSettings.includeMuted).trigger('input');
-    $(`#${htmlSuffix}-disable-transition`).prop('checked', extensionSettings.disableTransition).trigger('input');
-    $(`#${htmlSuffix}-debug`).prop('checked', extensionSettings.debug).trigger('input');
+    $(`#${htmlPrefix}-enabled`).prop('checked', extensionSettings.enabled).trigger('input');
+    $(`#${htmlPrefix}-location`).val(extensionSettings.location).trigger('change');
+    $(`#${htmlPrefix}-see-last`).prop('checked', extensionSettings.seeLast).trigger('input');
+    $(`#${htmlPrefix}-include-muted`).prop('checked', extensionSettings.includeMuted).trigger('input');
+    $(`#${htmlPrefix}-disable-transition`).prop('checked', extensionSettings.disableTransition).trigger('input');
+    $(`#${htmlPrefix}-min-message-display`).val(extensionSettings.minMessageDisplay).trigger('input');
+    $(`#${htmlPrefix}-debug`).prop('checked', extensionSettings.debug).trigger('input');
 
     log('Settings values initialized', extensionSettings);
 }
@@ -679,37 +743,28 @@ async function loadSettingsMenu() {
 // * MARK:Initialization
 
 async function initializeFeatures() {
-    const universalTrackerAlwaysOn = await HTML_TEMPLATES.get('universalTrackerButton');
+    Presence.ext('StatUsMaximus');
+    presenceModes.set('present', 'ignore');
+    presenceModes.set('ignore', 'present');
+    Presence.addPresenceMode('on_group_present');
+
+    const universalTrackerToggle = await HTML_TEMPLATES.get('universalTrackerToggle');
 	const universalTrackerContainer = $('#GroupFavDelOkBack div:has(#rm_group_automode_label)');
 
-	universalTrackerContainer.append(universalTrackerAlwaysOn);
-    universalTrackerAlwaysOn.on("change", (e) => {
-		context().chatMetadata[MetadataMap.universalTrackerOn] = $(e.target).prop("checked");
+	universalTrackerContainer.append(universalTrackerToggle);
+    universalTrackerToggle.on('change', (e) => {
+		context().chatMetadata[MetadataMap.universalTrackerOn] = $(e.target).prop('checked');
 		saveMetadataDebounced();
 	});
 
-	const groupMemberTemplateIcons = $('.group_member_icon');
-	const ignorePresenceButton = $(`<div title="Ignore Presence" class="ignore_presence_toggle fa-solid fa-eye-slash right_menu_button fa-lg interactable" tabindex="0"></div>`);
+	const ignorePresenceButton = await HTML_TEMPLATES.get('presenceModeButton', {clone: true});
+	const groupMemberIconsTemplate = $('.group_member_icon');
+	groupMemberIconsTemplate.prepend(ignorePresenceButton);
 
-	groupMemberTemplateIcons.prepend(ignorePresenceButton);
-
+	$(document).on('mouseup touchend', '#show_more_messages', () => addPresenceTrackerToMessages());
 	$('#rm_group_members').on('click', '.ignore_presence_toggle', togglePresenceTracking);
 	$('#chat').on('click', '.mes_button.mes_hide, .mes_button.mes_unhide', toggleMessagesManuallyHiddenFlag);
-
-	const groupMemberList = document.getElementById("rm_group_members");
-	const observer = new MutationObserver((mutationList, observer) => {
-		const chatMetadata = context().chatMetadata;
-
-		for (const mutation of mutationList) {
-			if (mutation.type === "childList" && mutation.addedNodes.length > 0 && chatMetadata.ignore_presence) {
-				mutation.addedNodes.forEach((node) => {
-					updatePresenceTrackingButton($(node));
-				});
-			}
-		}
-	});
-
-	observer.observe(groupMemberList, { childList: true, subtree: true });
+    $('#chat').on('click', '.mes_presence_tracker .presence_icon', toggleMessageIcon);
 }
 
 eventSource.once(eventTypes.APP_INITIALIZED, async function () {

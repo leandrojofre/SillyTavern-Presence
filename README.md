@@ -41,13 +41,15 @@ Click this button and it lights up, that will indicate that this character can s
 - `/presenceForgetAll <char_name>` Wipes the memory of a character.
 - `/presenceRemember name=<char_name> <mes_index|mes_range>` Adds **some** messages to the memory of a character.
 - `/presenceRememberAll <char_name>` Adds **all** messages to the memory of a character.
-- `/presenceReplace name=<char_name> replace=<char_name> forget=<true|false>? <mes_index|mes_range>?` Transfer or clone the messages from the memory of a character to another. `forget` is `true` by default, set it to `false` to just clone memmories.
+- `/presenceReplace name=<char_name> replace=<char_name> forget=<true|false>? forceName=<true|false>? <mes_index|mes_range>?` Transfer or clone the messages from the memory of a character to another. `forget` is `true` by default, set it to `false` to just copy memmories. `forceName` is `false` by default, set it to `true` to skip checking if `name` is a valid character identifier (used to transfer memory of a character that doesn't exist anymore).
 - `/presenceForceNonePresent <mes_index|mes_range>?` Makes **all** characters forget **everything**.
 - `/presenceForceAllPresent <mes_index|mes_range>?` Makes **all** characters remember **everything**.
 - `/presenceCopy source_index=<mes_index> target_index=<mes_index>` Copies the Tracker of a message and pastes it on another one - it does not replace the original tracker.
 - `/presenceLockHiddenMessages name=<char_name>? unlock=<true|false>? <mes_index|mes_range>?` Locks hidden messages in the chat. Locked messages won't be unhidden by the extension in future generations, unless they are unlocked or unhidden by the user.
+- `/presenceUpdateChatTrackers` Updates the UI of presence trackers on all messages that are missing them.
+- `/presenceMinChatMessage <mes_index>` Sets a minimum message to allow to be seen by characters. Including the selected ID, all messages after will be shown. Previous messages will be hidden even if the active character is present. If no ID is provided, it returns the current minimum message ID.
 
-## TODO
+### TODO
 - Include Universal Tracker in the commands.
 
 ### Support and Contributions

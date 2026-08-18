@@ -21,6 +21,10 @@
 		margin-bottom: 5px;
 	}
 
+    .gap-0 {
+        gap: 0;
+    }
+
 	.m-0 {
 		margin: 0;
 	}
@@ -28,6 +32,10 @@
 	.p-15px {
 		padding: 15px;
 	}
+
+    .inline-drawer-content {
+        padding: 10px;
+    }
 }
 
 #chat {
@@ -93,9 +101,11 @@
 	width: var(--icon-size-minified);
 }
 
-#chat .mes_block .mes_presence_tracker .presence_icon img {
+#chat .mes_block .mes_presence_tracker .presence_avatar {
 	transition: var(--presence-tracker-transition);
 	width: var(--icon-size-minified);
+	height: var(--icon-size-minified);
+    object-fit: cover;
 }
 
 #chat .mes_block .mes_presence_tracker:hover .presence_icon {
@@ -128,34 +138,39 @@
 	margin-right: var(--gap-size) !important;
 }
 
-#chat .mes_block .mes_presence_tracker:hover .presence_icon img {
+#chat .mes_block .mes_presence_tracker:hover .presence_avatar {
 	width: var(--icon-size) !important;
+	height: var(--icon-size) !important;
 }
 
 #rm_group_members .ignore_presence_toggle::before {
 	width: 24px;
 }
 
-#rm_group_members .ignore_presence_toggle:not(.active) {
+#rm_group_members .ignore_presence_toggle {
 	opacity: 0.4;
 	filter: brightness(0.5);
 	transition: all 0.2s ease-in-out;
 }
 
 #rm_group_members .ignore_presence_toggle:hover {
-	opacity: inherit;
-	filter: drop-shadow(0px 0px 5px rgb(243, 65, 65));
+	opacity: 1;
+    filter: brightness(2) var(--shadow);
 }
 
-#rm_group_members .ignore_presence_toggle.active {
-	filter: drop-shadow(0px 0px 5px rgb(243, 65, 65));
+#rm_group_members .ignore_presence_toggle[mode="ignore"] {
+    --shadow: drop-shadow(0px 0px 5px rgb(243, 65, 65));
+	opacity: 1;
+	filter: var(--shadow);
 }
 
-#presence_settings .inline-drawer-content {
-    padding: 10px;
+#rm_group_members .ignore_presence_toggle[mode="on_group_present"] {
+    --shadow: drop-shadow(0px 0px 5px rgb(210, 243, 65));
+	opacity: 1;
+	filter: var(--shadow);
 }
 
-.mes_block > .ch_name > .flex1 {
+#chat .mes_block > .ch_name > .flex1 {
 	flex-wrap: nowrap;
 	align-items: flex-start;
 }
