@@ -282,11 +282,16 @@ export async function addPresenceTrackerToMessages(refresh = false) {
 
 	if (!isActive()) return;
 
+    /** @type {Map<string, StatUsMaximus.Status>} */
+    const statuses = new Map();
+    const statusesAll = Presence.getStatusAvatarMap({onlyEnabled: false});
 	const selector = '#chat .mes:not(.smallSysMes, [has_presence_tracker="true"])';
     const elements = $(selector).toArray();
 	const chat = context().chat;
     const members = getCurrentParticipants().members;
-    const statuses = Presence.getStatusAvatarMap();
+
+    for (const [avatar, status] of statusesAll)
+        if (status.enabled) statuses.set(avatar, status);
 
     for (const element of elements) {
         const mesId = $(element).attr('mesid');
@@ -314,7 +319,7 @@ export async function addPresenceTrackerToMessages(refresh = false) {
             }
 
             const memberIcon = await HTML_TEMPLATES.get('trackerChatMember', {clone: true});
-            const avatarImg = getAvatarImage(member, {statuses});
+            const avatarImg = getAvatarImage(member, {statuses: statusesAll});
             const title = statuses.has(member) ? statuses.get(member).name : member;
 
             memberIcon.data('member', member);
