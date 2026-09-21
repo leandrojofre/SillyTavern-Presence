@@ -70,6 +70,14 @@ function findCharacter(search, {allowAvatar = true} = {}) {
     return character;
 }
 
+/** @param {ChatMessage[]} messages */
+function getDefaultIDRange(messages) {
+    return {
+        start: 0,
+        end: messages.length - 1
+    };
+}
+
 const ENUMS_PROVIDER = {
     characters: function() {
         return characters.map(char => new SlashCommandEnumValue(char.name));
@@ -327,7 +335,7 @@ async function commandLockHiddenMessages({ name = '', unlock = false } = {}, mes
     const {chat: chat_messages} = context();
     const characterName = String(name).trim();
     const doLock = String(unlock).trim().toLowerCase() !== 'true';
-    const messageRange = stringToRange(message_id, 0, chat_messages.length - 1);
+    const messageRange = stringToRange(message_id, 0, chat_messages.length - 1) || getDefaultIDRange(chat_messages);
     const messageId = messageRange?.start;
     let messagesToProcess = [];
 
@@ -776,13 +784,13 @@ export function initialize() {
                 SlashCommandArgument.fromProps({
                     description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
                     typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
-                    isRequired: false,
+                    isRequired: true,
                     enumProvider: commonEnumProviders.messages(),
                 }),
             ],
             helpString: `
             <div>
-                Makes all characters remember EVERYTHING, IRREVERSIBLY, index or range optional.
+                Makes all characters remember EVERYTHING - IRREVERSIBLY.
             </div>
             <div>
                 <strong>Example:</strong>
@@ -806,13 +814,13 @@ export function initialize() {
                 SlashCommandArgument.fromProps({
                     description: 'message index (starts with 0) or range - i.e.: 10 or 5-18',
                     typeList: [ARGUMENT_TYPE.NUMBER, ARGUMENT_TYPE.RANGE],
-                    isRequired: false,
+                    isRequired: true,
                     enumProvider: commonEnumProviders.messages(),
                 }),
             ],
             helpString: `
             <div>
-                Makes all characters forget EVERYTHING, IRREVERSIBLY, index or range optional.
+                Makes all characters forget EVERYTHING - IRREVERSIBLY.
             </div>
             <div>
                 <strong>Example:</strong>
@@ -854,7 +862,8 @@ export function initialize() {
             callback(args, messageID) {
                 if (!messageID) return String(extensionSettings.minMessageDisplay || 0);
 
-                const newMinID = Number(messageID || 0);
+                const parsedMessageID = Number(messageID || 0);
+                const newMinID = Math.max(0, parsedMessageID);
 
                 $(`#${htmlPrefix}-min-message-display`)
                     .val(newMinID)
